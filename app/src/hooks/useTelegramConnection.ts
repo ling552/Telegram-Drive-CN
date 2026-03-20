@@ -46,7 +46,7 @@ export function useTelegramConnection(onLogoutParent: () => void) {
                         setIsConnected(true);
                         queryClient.invalidateQueries({ queryKey: ['files'] });
                     } catch {
-                        const shouldRetry = window.confirm("Failed to connect to Telegram. Retry?");
+                        const shouldRetry = window.confirm("连接 Telegram 失败，是否重试？");
                         if (shouldRetry) {
                             window.location.reload();
                         } else {
@@ -92,13 +92,13 @@ export function useTelegramConnection(onLogoutParent: () => void) {
         } catch {
             // best effort cleanup
         }
-        toast.error("Connection lost. Please log in again.");
+        toast.error("连接已断开，请重新登录。");
         onLogoutParent();
     };
 
 
     const handleLogout = async () => {
-        if (!await confirm({ title: "Sign Out", message: "Are you sure you want to sign out? This will disconnect your active session.", confirmText: "Sign Out", variant: 'danger' })) return;
+        if (!await confirm({ title: "退出登录", message: "确定要退出登录吗？这将断开当前会话。", confirmText: "退出登录", variant: 'danger' })) return;
 
         try {
             await invoke('cmd_logout');
@@ -111,7 +111,7 @@ export function useTelegramConnection(onLogoutParent: () => void) {
             }
             onLogoutParent();
         } catch {
-            toast.error("Error signing out");
+            toast.error("退出登录失败");
             onLogoutParent();
         }
     };
@@ -133,12 +133,12 @@ export function useTelegramConnection(onLogoutParent: () => void) {
                 setFolders(merged);
                 await store.set('folders', merged);
                 await store.save();
-                toast.success(`Scan complete. Found ${added} new folders.`);
+                toast.success(`扫描完成，发现 ${added} 个新文件夹。`);
             } else {
-                toast.info("Scan complete. No new folders found.");
+                toast.info("扫描完成，未发现新文件夹。");
             }
         } catch {
-            toast.error("Sync failed");
+            toast.error("同步失败");
         } finally {
             setIsSyncing(false);
         }
@@ -152,18 +152,18 @@ export function useTelegramConnection(onLogoutParent: () => void) {
             setFolders(updated);
             await store.set('folders', updated);
             await store.save();
-            toast.success(`Folder "${name}" created.`);
+            toast.success(`已创建文件夹「${name}」。`);
         } catch (e) {
-            toast.error("Failed to create folder: " + e);
+            toast.error("创建文件夹失败：" + e);
             throw e;
         }
     };
 
     const handleFolderDelete = async (folderId: number, folderName: string) => {
         if (!await confirm({
-            title: "Delete Folder",
-            message: `Are you sure you want to delete "${folderName}"?\nThis will delete the channel on Telegram.`,
-            confirmText: "Delete",
+            title: "删除文件夹",
+            message: `确定要删除「${folderName}」吗？\n这将删除 Telegram 上的频道。`,
+            confirmText: "删除",
             variant: 'danger'
         })) return;
 
@@ -176,14 +176,14 @@ export function useTelegramConnection(onLogoutParent: () => void) {
                 await store.save();
             }
             if (activeFolderId === folderId) setActiveFolderId(null);
-            toast.success(`Folder "${folderName}" deleted.`);
+            toast.success(`已删除文件夹「${folderName}」。`);
         } catch (e: unknown) {
             const errStr = String(e);
             if (errStr.includes("not found")) {
                 if (await confirm({
-                    title: "Folder Not Found",
-                    message: `Folder "${folderName}" not found on Telegram (it may have been deleted externally).\nRemove from this app?`,
-                    confirmText: "Remove",
+                    title: "未找到文件夹",
+                    message: `Telegram 上未找到「${folderName}」（可能已被外部删除）。\n是否从本应用移除？`,
+                    confirmText: "移除",
                     variant: 'info'
                 })) {
                     const updated = folders.filter(f => f.id !== folderId);
@@ -195,7 +195,7 @@ export function useTelegramConnection(onLogoutParent: () => void) {
                     if (activeFolderId === folderId) setActiveFolderId(null);
                 }
             } else {
-                toast.error(`Failed to delete folder: ${e}`);
+                toast.error(`删除文件夹失败：${e}`);
             }
         }
     };

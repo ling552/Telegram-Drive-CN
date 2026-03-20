@@ -19,8 +19,8 @@ export function DragDropOverlay() {
                     <UploadCloud className="w-12 h-12 text-telegram-primary animate-bounce" />
                 </div>
                 <div className="text-center">
-                    <h3 className="text-xl font-bold text-telegram-text">Drop files to upload</h3>
-                    <p className="text-telegram-subtext text-sm mt-1">Files will be uploaded to the current folder</p>
+                    <h3 className="text-xl font-bold text-telegram-text">拖放文件以上传</h3>
+                    <p className="text-telegram-subtext text-sm mt-1">文件将上传到当前文件夹</p>
                 </div>
             </motion.div>
         </motion.div>

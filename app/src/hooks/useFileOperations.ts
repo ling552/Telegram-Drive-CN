@@ -14,19 +14,19 @@ export function useFileOperations(
     const { confirm } = useConfirm();
 
     const handleDelete = async (id: number) => {
-        if (!await confirm({ title: "Delete File", message: "Are you sure you want to delete this file?", confirmText: "Delete", variant: 'danger' })) return;
+        if (!await confirm({ title: "删除文件", message: "确定要删除此文件吗？", confirmText: "删除", variant: 'danger' })) return;
         try {
             await invoke('cmd_delete_file', { messageId: id, folderId: activeFolderId });
             queryClient.invalidateQueries({ queryKey: ['files', activeFolderId] });
-            toast.success("File deleted");
+            toast.success("文件已删除");
         } catch (e) {
-            toast.error(`Delete failed: ${e}`);
+            toast.error(`删除失败：${e}`);
         }
     }
 
     const handleBulkDelete = async () => {
         if (selectedIds.length === 0) return;
-        if (!await confirm({ title: "Delete Files", message: `Are you sure you want to delete ${selectedIds.length} files?`, confirmText: "Delete All", variant: 'danger' })) return;
+        if (!await confirm({ title: "删除文件", message: `确定要删除这 ${selectedIds.length} 个文件吗？`, confirmText: "全部删除", variant: 'danger' })) return;
 
         let success = 0;
         let fail = 0;
@@ -40,8 +40,8 @@ export function useFileOperations(
         }
         setSelectedIds([]);
         queryClient.invalidateQueries({ queryKey: ['files', activeFolderId] });
-        if (success > 0) toast.success(`Deleted ${success} files.`);
-        if (fail > 0) toast.error(`Failed to delete ${fail} files.`);
+        if (success > 0) toast.success(`已删除 ${success} 个文件。`);
+        if (fail > 0) toast.error(`有 ${fail} 个文件删除失败。`);
     }
 
     const handleDownload = async (id: number, name: string) => {
@@ -50,11 +50,11 @@ export function useFileOperations(
                 defaultPath: name,
             }));
             if (!savePath) return;
-            toast.info(`Download started: ${name}`);
+            toast.info(`开始下载：${name}`);
             await invoke('cmd_download_file', { messageId: id, savePath, folderId: activeFolderId });
-            toast.success(`Download complete: ${name}`);
+            toast.success(`下载完成：${name}`);
         } catch (e) {
-            toast.error(`Download failed: ${e}`);
+            toast.error(`下载失败：${e}`);
         }
     }
 
@@ -62,12 +62,12 @@ export function useFileOperations(
         if (selectedIds.length === 0) return;
         try {
             const dirPath = await import('@tauri-apps/plugin-dialog').then(d => d.open({
-                directory: true, multiple: false, title: "Select Download Destination"
+                directory: true, multiple: false, title: "选择下载位置"
             }));
             if (!dirPath) return;
             let successCount = 0;
             const targetFiles = displayedFiles.filter((f) => selectedIds.includes(f.id));
-            toast.info(`Starting batch download of ${targetFiles.length} files...`);
+            toast.info(`开始批量下载 ${targetFiles.length} 个文件...`);
 
             for (const file of targetFiles) {
                 const filePath = `${dirPath}/${file.name}`;
@@ -76,10 +76,10 @@ export function useFileOperations(
                     successCount++;
                 } catch (e) { }
             }
-            toast.success(`Downloaded ${successCount} files.`);
+            toast.success(`已下载 ${successCount} 个文件。`);
             setSelectedIds([]);
         } catch (e) {
-            toast.error(`Bulk download failed: ${e}`);
+            toast.error(`批量下载失败：${e}`);
         }
     }
 
@@ -91,27 +91,27 @@ export function useFileOperations(
                 sourceFolderId: activeFolderId,
                 targetFolderId: targetFolderId
             });
-            toast.success(`Moved ${selectedIds.length} files.`);
+            toast.success(`已移动 ${selectedIds.length} 个文件。`);
             queryClient.invalidateQueries({ queryKey: ['files', activeFolderId] });
             setSelectedIds([]);
             if (onSuccess) onSuccess();
         } catch {
-            toast.error('Failed to move files');
+            toast.error('移动文件失败');
         }
     };
 
     const handleDownloadFolder = async () => {
         if (displayedFiles.length === 0) {
-            toast.info("Folder is empty.");
+            toast.info("文件夹为空。");
             return;
         }
         try {
             const dirPath = await import('@tauri-apps/plugin-dialog').then(d => d.open({
-                directory: true, multiple: false, title: "Download Folder To..."
+                directory: true, multiple: false, title: "选择文件夹下载位置..."
             }));
             if (!dirPath) return;
             let successCount = 0;
-            toast.info(`Downloading folder contents (${displayedFiles.length} files)...`);
+            toast.info(`正在下载文件夹内容（${displayedFiles.length} 个文件）...`);
             for (const file of displayedFiles) {
                 const filePath = `${dirPath}/${file.name}`;
                 try {
@@ -119,9 +119,9 @@ export function useFileOperations(
                     successCount++;
                 } catch (e) { }
             }
-            toast.success(`Folder Download Complete: ${successCount} files.`);
+            toast.success(`文件夹下载完成：${successCount} 个文件。`);
         } catch (e) {
-            toast.error("Error: " + e);
+            toast.error("错误：" + e);
         }
     }
 

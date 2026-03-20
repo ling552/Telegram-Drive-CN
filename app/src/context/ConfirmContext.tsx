@@ -47,13 +47,13 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                         <p className="text-telegram-subtext text-sm mb-6 whitespace-pre-line">{options.message}</p>
                         <div className="flex justify-end gap-3">
                             <button onClick={handleCancel} className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/5 text-telegram-subtext transition">
-                                {options.cancelText || 'Cancel'}
+                                {options.cancelText || '取消'}
                             </button>
                             <button
                                 onClick={handleConfirm}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition ${options.variant === 'danger' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-telegram-primary text-white hover:bg-telegram-primary/90'}`}
                             >
-                                {options.confirmText || 'Confirm'}
+                                {options.confirmText || '确认'}
                             </button>
                         </div>
                     </div>

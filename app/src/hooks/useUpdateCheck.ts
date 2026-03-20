@@ -38,7 +38,7 @@ export function useUpdateCheck() {
                 setState(s => ({ ...s, checking: false, available: false }));
             }
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Failed to check for updates';
+            const message = err instanceof Error ? err.message : '检查更新失败';
             setState(s => ({
                 ...s,
                 checking: false,
@@ -71,7 +71,7 @@ export function useUpdateCheck() {
 
             await relaunch();
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Failed to install update';
+            const message = err instanceof Error ? err.message : '安装更新失败';
             setState(s => ({
                 ...s,
                 downloading: false,

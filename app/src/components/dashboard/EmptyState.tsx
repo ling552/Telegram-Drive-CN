@@ -49,10 +49,10 @@ export function EmptyState({ onUpload }: EmptyStateProps) {
             </svg>
 
             <h3 className="text-xl font-semibold text-telegram-text mb-2">
-                This folder is empty
+                此文件夹为空
             </h3>
             <p className="text-telegram-subtext text-sm mb-6 max-w-xs">
-                Drag and drop files here, or click the button below to upload from your computer.
+                将文件拖放到这里，或点击下方按钮从电脑上传。
             </p>
 
             <button
@@ -60,11 +60,11 @@ export function EmptyState({ onUpload }: EmptyStateProps) {
                 className="inline-flex items-center gap-2 px-6 py-3 bg-telegram-primary text-black font-medium rounded-xl hover:bg-telegram-primary/90 transition-all hover:scale-105 shadow-lg shadow-telegram-primary/20"
             >
                 <Upload className="w-5 h-5" />
-                Upload Files
+                上传文件
             </button>
 
             <p className="text-xs text-telegram-subtext/50 mt-6">
-                Tip: Use <kbd className="px-1.5 py-0.5 bg-telegram-hover rounded text-telegram-subtext">Cmd + F</kbd> to search
+                提示：使用 <kbd className="px-1.5 py-0.5 bg-telegram-hover rounded text-telegram-subtext">Cmd / Ctrl + F</kbd> 搜索
             </p>
         </div>
     );

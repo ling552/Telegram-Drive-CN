@@ -17,16 +17,16 @@ export function DownloadQueue({ items, onClearFinished }: DownloadQueueProps) {
             <div className="p-3 border-b border-telegram-border bg-telegram-hover flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <Download className="w-4 h-4 text-telegram-secondary" />
-                    <h4 className="text-sm font-medium text-telegram-text">Downloads</h4>
+                    <h4 className="text-sm font-medium text-telegram-text">下载</h4>
                     {activeCount > 0 && (
                         <span className="text-xs px-1.5 py-0.5 bg-telegram-secondary/20 text-telegram-secondary rounded-full">
-                            {activeCount} active
+                            {activeCount} 个进行中
                         </span>
                     )}
                 </div>
                 {completedCount > 0 && (
                     <button onClick={onClearFinished} className="text-xs text-telegram-primary hover:text-telegram-text transition-colors">
-                        Clear Finished
+                        清除已完成
                     </button>
                 )}
             </div>

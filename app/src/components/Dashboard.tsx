@@ -116,7 +116,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     }, []);
 
     const handleFocusSearch = useCallback(() => {
-        const searchInput = document.querySelector('input[placeholder="Search files..."]') as HTMLInputElement;
+        const searchInput = document.querySelector('input[placeholder="搜索文件..."]') as HTMLInputElement;
         if (searchInput) {
             searchInput.focus();
             searchInput.select();
@@ -217,18 +217,18 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
                 if (selectedIds.includes(fileId)) setSelectedIds([]);
 
-                toast.success(`Moved ${idsToMove.length} file(s).`);
+                toast.success(`已移动 ${idsToMove.length} 个文件。`);
 
                 setInternalDragFileId(null);
             } catch {
-                toast.error(`Failed to move file(s).`);
+                toast.error(`移动文件失败。`);
             }
         }
     }
 
     const currentFolderName = activeFolderId === null
-        ? "Saved Messages"
-        : folders.find(f => f.id === activeFolderId)?.name || "Folder";
+        ? "已保存的消息"
+        : folders.find(f => f.id === activeFolderId)?.name || "文件夹";
 
 
     const handleRootDragOver = (e: React.DragEvent) => {
@@ -308,7 +308,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                 {searchTerm.length > 2 && (
                     <div className="px-6 pt-4 pb-0">
                         <h2 className="text-sm font-medium text-telegram-subtext">
-                            Search Results for <span className="text-telegram-primary">"{searchTerm}"</span>
+                            搜索结果：<span className="text-telegram-primary">"{searchTerm}"</span>
                         </h2>
                     </div>
                 )}

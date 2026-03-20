@@ -21,7 +21,7 @@ export function useFileUpload(activeFolderId: number | null, store: Store | null
                 const pending = saved.filter(i => i.status === 'pending');
                 if (pending.length > 0) {
                     setUploadQueue(pending);
-                    toast.info(`Restored ${pending.length} pending uploads`);
+                    toast.info(`已恢复 ${pending.length} 个待上传任务`);
                 }
             }
             setInitialized(true);
@@ -53,7 +53,7 @@ export function useFileUpload(activeFolderId: number | null, store: Store | null
             queryClient.invalidateQueries({ queryKey: ['files', item.folderId] });
         } catch (e) {
             setUploadQueue(q => q.map(i => i.id === item.id ? { ...i, status: 'error', error: String(e) } : i));
-            toast.error(`Upload failed for ${item.path.split('/').pop()}: ${e}`);
+            toast.error(`上传失败：${item.path.split('/').pop()}: ${e}`);
         } finally {
             setProcessing(false);
         }
@@ -72,10 +72,10 @@ export function useFileUpload(activeFolderId: number | null, store: Store | null
                     status: 'pending'
                 }));
                 setUploadQueue(prev => [...prev, ...newItems]);
-                toast.info(`Queued ${paths.length} files for upload`);
+                toast.info(`已加入 ${paths.length} 个文件到上传队列`);
             }
         } catch {
-            toast.error("Failed to open file dialog");
+            toast.error("无法打开文件选择对话框");
         }
     };
 

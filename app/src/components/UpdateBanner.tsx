@@ -32,9 +32,9 @@ export function UpdateBanner({
 
                         <span className="text-white font-medium">
                             {downloading ? (
-                                <>Downloading update... {progress}%</>
+                                <>正在下载更新... {progress}%</>
                             ) : (
-                                <>A new version ({version}) is available!</>
+                                <>发现新版本（{version}）！</>
                             )}
                         </span>
 
@@ -55,7 +55,7 @@ export function UpdateBanner({
                                 className="flex items-center gap-2 px-4 py-1.5 bg-white text-telegram-primary font-semibold rounded-full hover:bg-white/90 transition-colors shadow-md"
                             >
                                 <Download className="w-4 h-4" />
-                                Update Now
+                                立即更新
                             </button>
                         )}
 
@@ -63,7 +63,7 @@ export function UpdateBanner({
                             <button
                                 onClick={onDismiss}
                                 className="p-1 text-white/70 hover:text-white transition-colors"
-                                title="Dismiss"
+                                title="关闭"
                             >
                                 <X className="w-4 h-4" />
                             </button>

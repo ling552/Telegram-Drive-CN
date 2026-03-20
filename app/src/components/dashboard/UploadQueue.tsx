@@ -11,8 +11,8 @@ export function UploadQueue({ items, onClearFinished }: UploadQueueProps) {
     return (
         <div className="fixed bottom-4 right-4 w-80 bg-telegram-surface border border-telegram-border rounded-xl shadow-2xl overflow-hidden z-[100]">
             <div className="p-3 border-b border-telegram-border bg-telegram-hover flex justify-between items-center">
-                <h4 className="text-sm font-medium text-telegram-text">Uploads</h4>
-                <button onClick={onClearFinished} className="text-xs text-telegram-primary hover:text-telegram-text transition-colors">Clear Finished</button>
+                <h4 className="text-sm font-medium text-telegram-text">上传</h4>
+                <button onClick={onClearFinished} className="text-xs text-telegram-primary hover:text-telegram-text transition-colors">清除已完成</button>
             </div>
             <div className="max-h-60 overflow-y-auto p-2 space-y-2">
                 {items.map(item => (
@@ -25,7 +25,7 @@ export function UploadQueue({ items, onClearFinished }: UploadQueueProps) {
                             <div className="flex-1 truncate text-telegram-subtext" title={item.path}>
                                 {item.path.split('/').pop()}
                             </div>
-                            {item.status === 'error' && <div className="text-xs text-red-400">Error</div>}
+                            {item.status === 'error' && <div className="text-xs text-red-400">错误</div>}
                         </div>
                         {item.status === 'uploading' && (
                             <div className="w-full bg-telegram-border h-1 mt-1 rounded-full overflow-hidden">

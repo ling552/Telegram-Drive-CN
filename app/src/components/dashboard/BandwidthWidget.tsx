@@ -15,7 +15,7 @@ export function BandwidthWidget({ bandwidth }: BandwidthWidgetProps) {
     return (
         <div className="mt-3 text-xs text-telegram-subtext space-y-1">
             <div className="flex justify-between">
-                <span>Used Today:</span>
+                <span>今日已用：</span>
             </div>
             <div className="w-full bg-telegram-border rounded-full h-1.5 overflow-hidden">
                 <div

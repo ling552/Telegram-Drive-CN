@@ -65,13 +65,13 @@ export function ExternalDropBlocker({ onUploadClick }: { onUploadClick: () => vo
                     </div>
                     <div>
                         <h3 className="text-lg font-semibold text-telegram-text mb-2">
-                            Use the Upload Button
+                            请使用上传按钮
                         </h3>
                         <p className="text-telegram-subtext text-sm">
-                            To upload files, please use the <strong>Upload</strong> button in the toolbar.
+                            上传文件请使用工具栏中的 <strong>上传</strong> 按钮。
                             <br />
                             <span className="text-xs opacity-70 mt-2 block">
-                                Drag-and-drop from Finder is not supported.
+                                不支持从系统文件管理器直接拖放。
                             </span>
                         </p>
                     </div>
@@ -82,7 +82,7 @@ export function ExternalDropBlocker({ onUploadClick }: { onUploadClick: () => vo
                         }}
                         className="mt-2 px-6 py-2 bg-telegram-primary text-white rounded-lg font-medium hover:bg-telegram-primary/90 transition-colors"
                     >
-                        Open Upload Dialog
+                        打开上传对话框
                     </button>
                 </div>
             </div>

@@ -31,7 +31,7 @@ export function PreviewModal({ file, onClose, activeFolderId }: PreviewModalProp
                         setSrc(convertFileSrc(path));
                     }
                 } else {
-                    setError("Preview not available");
+                    setError("无法预览");
                 }
             } catch (e) {
                 setError(String(e));
@@ -56,14 +56,14 @@ export function PreviewModal({ file, onClose, activeFolderId }: PreviewModalProp
                 {loading && (
                     <div className="flex flex-col items-center gap-4 text-white">
                         <div className="w-10 h-10 border-4 border-telegram-primary border-t-transparent rounded-full animate-spin"></div>
-                        <p>Loading preview...</p>
-                        <p className="text-xs text-white/50">Downloading from Telegram...</p>
+                        <p>正在加载预览...</p>
+                        <p className="text-xs text-white/50">正在从 Telegram 下载...</p>
                     </div>
                 )}
 
                 {error && (
                     <div className="text-red-400 bg-white/10 p-4 rounded-lg border border-red-500/20">
-                        <p className="font-bold">Preview Error</p>
+                        <p className="font-bold">预览错误</p>
                         <p className="text-sm">{error}</p>
                     </div>
                 )}
@@ -71,15 +71,15 @@ export function PreviewModal({ file, onClose, activeFolderId }: PreviewModalProp
                 {!loading && !error && src && (
                     <div className="flex flex-col items-center">
                         {['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif'].some(ext => file.name.toLowerCase().endsWith(ext)) ? (
-                            <img src={src.startsWith('data:') ? src : `${src}?t=${Date.now()}`} className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-black" alt="Preview" />
+                            <img src={src.startsWith('data:') ? src : `${src}?t=${Date.now()}`} className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-black" alt="预览" />
                         ) : ['mp4', 'webm', 'ogg', 'mov'].some(ext => file.name.toLowerCase().endsWith(ext)) ? (
                             <video src={src} controls className="max-w-full max-h-[85vh] rounded-lg shadow-2xl bg-black" />
                         ) : (
                             <div className="bg-[#1c1c1c] p-8 rounded-xl text-center border border-white/10 shadow-2xl">
                                 <File className="w-16 h-16 text-telegram-primary mx-auto mb-4" />
                                 <h3 className="text-xl text-white font-medium mb-2">{file.name}</h3>
-                                <p className="text-gray-400 mb-6">Preview not supported in app.</p>
-                                <p className="text-xs text-gray-500">File type: {file.name.split('.').pop()}</p>
+                                <p className="text-gray-400 mb-6">应用内不支持预览。</p>
+                                <p className="text-xs text-gray-500">文件类型：{file.name.split('.').pop()}</p>
                             </div>
                         )}
                     </div>

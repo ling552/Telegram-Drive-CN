@@ -40,13 +40,13 @@ export function MediaPlayer({ file, onClose, activeFolderId }: MediaPlayerProps)
                             <audio src={streamUrl} controls autoPlay className="w-full max-w-md" />
                         </div>
                     ) : (
-                        <div className="text-white">Unsupported media type</div>
+                        <div className="text-white">不支持的媒体类型</div>
                     )}
                 </div>
 
                 <div className="mt-4 text-center">
                     <h3 className="text-lg font-medium text-white">{file.name}</h3>
-                    <p className="text-sm text-white/50">Streaming from Telegram Drive</p>
+                    <p className="text-sm text-white/50">正在从 Telegram Drive 串流</p>
                 </div>
             </div>
         </div>

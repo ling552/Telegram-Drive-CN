@@ -13,7 +13,7 @@ function AuthThemeToggle() {
         <button
             onClick={toggleTheme}
             className="absolute top-4 right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
-            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            title={theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
         >
             {theme === 'dark' ? (
                 <Sun className="w-5 h-5 text-white" />
@@ -32,13 +32,13 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                 <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
                     <ShieldCheck className="w-10 h-10 text-red-500" />
                 </div>
-                <h1 className="text-2xl font-bold text-white mb-4">Desktop App Required</h1>
+                <h1 className="text-2xl font-bold text-white mb-4">需要桌面应用</h1>
                 <p className="text-gray-400 mb-6 leading-relaxed">
-                    You are viewing the internal development server in a browser.
-                    This application cannot function here because it requires access to the system backend (Rust).
+                    你正在浏览器中查看内部开发服务器。
+                    该应用需要访问系统后端（Rust），无法在浏览器中运行。
                 </p>
                 <div className="p-4 bg-gray-800 rounded-xl border border-gray-700 text-sm text-gray-300">
-                    Please open the <strong>Telegram Drive</strong> window in your OS taskbar/dock to continue.
+                    请在系统任务栏/程序坞中打开 <strong>Telegram Drive</strong> 窗口继续。
                 </div>
             </div>
         )
@@ -101,7 +101,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
     const handleSetupSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!apiId || !apiHash) {
-            setError("Both API ID and Hash are required.");
+            setError("API ID 和 Hash 均为必填。");
             return;
         }
         setError(null);
@@ -115,7 +115,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
         setError(null);
         try {
             const idInt = parseInt(apiId, 10);
-            if (isNaN(idInt)) throw new Error("API ID must be a number");
+            if (isNaN(idInt)) throw new Error("API ID 必须为数字");
 
             await invoke("cmd_auth_request_code", {
                 phone,
@@ -152,7 +152,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
             } else if (res.next_step === "password") {
                 setStep("password");
             } else {
-                setError("Unknown error");
+                setError("未知错误");
             }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : String(err));
@@ -170,7 +170,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
             if (res.success) {
                 onLogin();
             } else {
-                setError("Password verification failed.");
+                setError("密码验证失败。");
             }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : String(err));
@@ -193,7 +193,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                         <img src="/logo.svg" alt="Logo" className="w-full h-full" />
                     </div>
                     <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">Telegram Drive</h1>
-                    <p className="text-sm text-white/60 font-medium">Self-Hosted Secure Storage</p>
+                    <p className="text-sm text-white/60 font-medium">自托管安全存储</p>
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -208,9 +208,9 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                                 <span className="text-2xl">⏳</span>
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-white mb-2">Too Many Requests</h2>
-                                <p className="text-sm text-gray-400">Telegram has temporarily limited your actions.</p>
-                                <p className="text-sm text-gray-400">Please wait before trying again.</p>
+                                <h2 className="text-xl font-bold text-white mb-2">请求过于频繁</h2>
+                                <p className="text-sm text-gray-400">Telegram 暂时限制了你的操作。</p>
+                                <p className="text-sm text-gray-400">请稍后再试。</p>
                             </div>
 
                             <div className="text-5xl font-mono items-center justify-center flex text-blue-400 font-bold">
@@ -218,7 +218,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                             </div>
 
                             <p className="text-xs text-red-400/60 mt-4">
-                                Do not restart the app. The timer will reset if you do.
+                                请不要重启应用，否则计时会重置。
                             </p>
                         </motion.div>
                     ) : (
@@ -267,7 +267,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                                         type="submit"
                                         className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98]"
                                     >
-                                        Configure <Settings className="w-4 h-4" />
+                                        配置 <Settings className="w-4 h-4" />
                                     </button>
 
                                     <button
@@ -276,7 +276,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                                         className="w-full text-xs text-blue-300 hover:text-white transition-colors flex items-center justify-center gap-1.5 py-1"
                                     >
                                         <HelpCircle className="w-3 h-3" />
-                                        How do I get my API credentials?
+                                        如何获取 API 凭证？
                                     </button>
 
                                     <button
@@ -284,7 +284,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                                         onClick={() => onLogin()}
                                         className="w-full text-xs text-red-400/60 hover:text-red-300 transition-colors py-1"
                                     >
-                                        Dev Mode
+                                        开发者模式
                                     </button>
                                 </motion.form>
                             )}
@@ -300,7 +300,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                                     className="space-y-6"
                                 >
                                     <div className="space-y-2">
-                                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Phone Number</label>
+                                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">手机号码</label>
                                         <div className="relative">
                                             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 auth-form-icon" />
                                             <input
@@ -319,10 +319,10 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                                             disabled={loading}
                                             className="w-full bg-white text-black hover:bg-gray-100 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            {loading ? "Connecting..." : <>Continue <ArrowRight className="w-5 h-5" /></>}
+                                            {loading ? "连接中..." : <>继续 <ArrowRight className="w-5 h-5" /></>}
                                         </button>
                                         <button type="button" onClick={() => setStep("setup")} className="text-xs text-gray-500 hover:text-white transition-colors py-2">
-                                            Back to Configuration
+                                            返回配置
                                         </button>
                                     </div>
                                 </motion.form>
@@ -339,7 +339,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                                     className="space-y-6"
                                 >
                                     <div className="space-y-2">
-                                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Telegram Code</label>
+                                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Telegram 验证码</label>
                                         <div className="relative">
                                             <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 auth-form-icon" />
                                             <input
@@ -358,10 +358,10 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                                             disabled={loading}
                                             className="w-full bg-white text-black hover:bg-gray-100 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.98]"
                                         >
-                                            {loading ? "Verifying..." : "Sign In"}
+                                            {loading ? "验证中..." : "登录"}
                                         </button>
                                         <button type="button" onClick={() => setStep("phone")} className="text-xs text-gray-500 hover:text-white transition-colors py-2">
-                                            Change Phone Number
+                                            更换手机号
                                         </button>
                                     </div>
                                 </motion.form>
@@ -380,18 +380,18 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                                     <div className="space-y-2">
                                         <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl mb-4">
                                             <p className="text-xs text-blue-300 text-center">
-                                                Your account has Two-Factor Authentication enabled.
-                                                Please enter your cloud password to continue.
+                                                你的账号启用了两步验证。
+                                                请输入云密码以继续。
                                             </p>
                                         </div>
-                                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Cloud Password</label>
+                                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">云密码</label>
                                         <div className="relative">
                                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 auth-form-icon" />
                                             <input
                                                 type="password"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
-                                                placeholder="Enter your password"
+                                                placeholder="输入你的密码"
                                                 className="w-full glass-input rounded-xl pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-all text-lg"
                                                 autoFocus
                                             />
@@ -404,10 +404,10 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                                             disabled={loading || !password}
                                             className="w-full bg-white text-black hover:bg-gray-100 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            {loading ? "Verifying..." : "Unlock"}
+                                            {loading ? "验证中..." : "解锁"}
                                         </button>
                                         <button type="button" onClick={() => { setStep("code"); setPassword(""); setError(null); }} className="text-xs text-gray-500 hover:text-white transition-colors py-2">
-                                            Back to Code Entry
+                                            返回验证码输入
                                         </button>
                                     </div>
                                 </motion.form>
@@ -446,7 +446,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-telegram-text">Getting Started</h2>
+                                <h2 className="text-xl font-bold text-telegram-text">快速开始</h2>
                                 <button onClick={() => setShowHelp(false)} className="p-2 hover:bg-telegram-hover rounded-lg transition-colors">
                                     <X className="w-5 h-5 text-telegram-subtext" />
                                 </button>
@@ -455,43 +455,43 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                             <div className="space-y-6 text-telegram-text">
                                 <div className="p-4 bg-telegram-primary/10 border border-telegram-primary/20 rounded-xl">
                                     <p className="text-sm text-telegram-subtext">
-                                        <strong className="text-telegram-primary">Telegram Drive</strong> uses your Telegram account as secure cloud storage. You'll need a Telegram account and API credentials to get started.
+                                        <strong className="text-telegram-primary">Telegram Drive</strong> 会把你的 Telegram 账号当作安全云存储使用。开始之前需要一个 Telegram 账号和 API 凭证。
                                     </p>
                                 </div>
 
                                 <div className="space-y-4">
                                     <h3 className="font-semibold flex items-center gap-2">
                                         <span className="w-6 h-6 bg-telegram-primary text-white text-xs font-bold rounded-full flex items-center justify-center">1</span>
-                                        Go to Telegram's Developer Portal
+                                        前往 Telegram 开发者门户
                                     </h3>
                                     <p className="text-sm text-telegram-subtext ml-8">
-                                        Visit <a href="https://my.telegram.org" target="_blank" className="text-telegram-primary underline hover:text-telegram-text">my.telegram.org</a> and log in with your phone number.
+                                        访问 <a href="https://my.telegram.org" target="_blank" className="text-telegram-primary underline hover:text-telegram-text">my.telegram.org</a> 并使用手机号登录。
                                     </p>
                                 </div>
 
                                 <div className="space-y-4">
                                     <h3 className="font-semibold flex items-center gap-2">
                                         <span className="w-6 h-6 bg-telegram-primary text-white text-xs font-bold rounded-full flex items-center justify-center">2</span>
-                                        Create a New Application
+                                        创建新应用
                                     </h3>
                                     <p className="text-sm text-telegram-subtext ml-8">
-                                        Click on <strong>"API development tools"</strong> and create a new application. Use any name and description you like.
+                                        点击 <strong>“API development tools”</strong> 并创建新应用。名称和描述可自行填写。
                                     </p>
                                 </div>
 
                                 <div className="space-y-4">
                                     <h3 className="font-semibold flex items-center gap-2">
                                         <span className="w-6 h-6 bg-telegram-primary text-white text-xs font-bold rounded-full flex items-center justify-center">3</span>
-                                        Copy Your Credentials
+                                        复制你的凭证
                                     </h3>
                                     <p className="text-sm text-telegram-subtext ml-8">
-                                        After creating the app, you'll see your <strong>API ID</strong> (a number) and <strong>API Hash</strong> (a string). Copy both and paste them into the fields on the previous screen.
+                                        创建完成后你会看到 <strong>API ID</strong>（数字）和 <strong>API Hash</strong>（字符串）。复制后填入上一页的输入框。
                                     </p>
                                 </div>
 
                                 <div className="p-4 bg-telegram-hover rounded-xl border border-telegram-border">
                                     <p className="text-xs text-telegram-subtext">
-                                        <strong>🔒 Privacy:</strong> Your credentials are stored locally on your device and are never sent to any third-party servers. All data goes directly between you and Telegram.
+                                        <strong>🔒 隐私：</strong> 你的凭证仅保存在本地，不会发送到任何第三方服务器。所有数据直接在你与 Telegram 之间传输。
                                     </p>
                                 </div>
 
@@ -501,7 +501,7 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
                                     className="w-full bg-telegram-primary text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-telegram-primary/90 transition-colors"
                                 >
                                     <ExternalLink className="w-4 h-4" />
-                                    Open my.telegram.org
+                                    打开 my.telegram.org
                                 </a>
                             </div>
                         </motion.div>

@@ -66,12 +66,12 @@ export function ContextMenu({ x, y, file, onClose, onDownload, onDelete, onPrevi
                     {['mp4', 'webm', 'ogg', 'mov', 'mkv', 'avi', 'mp3', 'wav', 'aac', 'flac', 'm4a', 'opus'].some(ext => file.name.toLowerCase().endsWith(ext)) ? (
                         <>
                             <Play className="w-4 h-4 text-telegram-primary" />
-                            Play
+                            播放
                         </>
                     ) : (
                         <>
                             <Eye className="w-4 h-4 text-blue-500" />
-                            Preview
+                            预览
                         </>
                     )}
                 </button>
@@ -80,25 +80,25 @@ export function ContextMenu({ x, y, file, onClose, onDownload, onDelete, onPrevi
             {file.type === 'folder' && (
                 <button onClick={onPreview} className="flex items-center gap-2 px-2 py-1.5 text-sm text-telegram-text hover:bg-telegram-hover rounded transition-colors text-left w-full">
                     <FolderOpen className="w-4 h-4 text-yellow-500" />
-                    Open
+                    打开
                 </button>
             )}
 
             <button onClick={onDownload} className="flex items-center gap-2 px-2 py-1.5 text-sm text-telegram-text hover:bg-telegram-hover rounded transition-colors text-left w-full">
                 <HardDrive className="w-4 h-4 text-green-500" />
-                Download
+                下载
             </button>
 
             <button disabled className="flex items-center gap-2 px-2 py-1.5 text-sm text-telegram-subtext hover:bg-telegram-hover rounded transition-colors text-left w-full cursor-not-allowed opacity-50">
                 <Pencil className="w-4 h-4" />
-                Rename
+                重命名
             </button>
 
             <div className="h-px bg-telegram-border my-1" />
 
             <button onClick={onDelete} className="flex items-center gap-2 px-2 py-1.5 text-sm text-red-500 hover:bg-red-500/10 rounded transition-colors text-left w-full">
                 <Trash2 className="w-4 h-4" />
-                Delete
+                删除
             </button>
         </div>
     );

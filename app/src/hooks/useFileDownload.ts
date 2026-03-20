@@ -19,7 +19,7 @@ export function useFileDownload(store: Store | null) {
                 const pending = saved.filter(i => i.status === 'pending');
                 if (pending.length > 0) {
                     setDownloadQueue(pending);
-                    toast.info(`Restored ${pending.length} pending downloads`);
+                    toast.info(`已恢复 ${pending.length} 个待下载任务`);
                 }
             }
             setInitialized(true);
@@ -62,10 +62,10 @@ export function useFileDownload(store: Store | null) {
             });
 
             setDownloadQueue(q => q.map(i => i.id === item.id ? { ...i, status: 'success' } : i));
-            toast.success(`Downloaded: ${item.filename}`);
+            toast.success(`已下载：${item.filename}`);
         } catch (e) {
             setDownloadQueue(q => q.map(i => i.id === item.id ? { ...i, status: 'error', error: String(e) } : i));
-            toast.error(`Download failed: ${item.filename}`);
+            toast.error(`下载失败：${item.filename}`);
         } finally {
             setProcessing(false);
         }
@@ -86,7 +86,7 @@ export function useFileDownload(store: Store | null) {
         const dirPath = await open({
             directory: true,
             multiple: false,
-            title: "Select Download Destination"
+            title: "选择下载位置"
         });
         if (!dirPath) return;
 
@@ -102,7 +102,7 @@ export function useFileDownload(store: Store | null) {
             setDownloadQueue(prev => [...prev, newItem]);
         }
 
-        toast.info(`Queued ${files.length} files for download`);
+        toast.info(`已加入 ${files.length} 个文件到下载队列`);
     };
 
     const clearFinished = () => {

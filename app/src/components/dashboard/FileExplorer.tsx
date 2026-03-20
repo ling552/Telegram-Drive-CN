@@ -151,13 +151,13 @@ export function FileExplorer({
         return (
             <div className="flex-1 p-6 flex justify-center items-center text-telegram-subtext flex-col gap-4">
                 <div className="w-8 h-8 border-4 border-telegram-primary border-t-transparent rounded-full animate-spin"></div>
-                Loading your files...
+                正在加载文件...
             </div>
         )
     }
 
     if (error) {
-        return <div className="flex-1 p-6 flex justify-center items-center text-red-400">Error loading files</div>
+        return <div className="flex-1 p-6 flex justify-center items-center text-red-400">加载文件出错</div>
     }
 
     if (files.length === 0) {
@@ -180,24 +180,24 @@ export function FileExplorer({
                 <>
 
                     <div className="flex items-center gap-2 mb-4 text-xs text-telegram-subtext">
-                        <span>Sort by:</span>
+                        <span>排序：</span>
                         <button
                             onClick={() => handleSort('name')}
                             className={`px-2 py-1 rounded flex items-center gap-1 hover:bg-white/5 ${sortField === 'name' ? 'text-telegram-primary' : ''}`}
                         >
-                            Name <SortIcon field="name" />
+                            名称 <SortIcon field="name" />
                         </button>
                         <button
                             onClick={() => handleSort('size')}
                             className={`px-2 py-1 rounded flex items-center gap-1 hover:bg-white/5 ${sortField === 'size' ? 'text-telegram-primary' : ''}`}
                         >
-                            Size <SortIcon field="size" />
+                            大小 <SortIcon field="size" />
                         </button>
                         <button
                             onClick={() => handleSort('date')}
                             className={`px-2 py-1 rounded flex items-center gap-1 hover:bg-white/5 ${sortField === 'date' ? 'text-telegram-primary' : ''}`}
                         >
-                            Date <SortIcon field="date" />
+                            日期 <SortIcon field="date" />
                         </button>
                     </div>
 
@@ -229,7 +229,7 @@ export function FileExplorer({
                                                     style={{ height: `${cardHeight}px` }}
                                                 >
                                                     <Plus className="w-8 h-8 mb-2 group-hover:scale-110 transition-transform" />
-                                                    <span className="text-sm font-medium">Upload File</span>
+                                                    <span className="text-sm font-medium">上传文件</span>
                                                 </button>
                                             );
                                         }
@@ -261,15 +261,15 @@ export function FileExplorer({
                 <div className="flex flex-col w-full">
                     {/* List Header */}
                     <div className="grid grid-cols-[2rem_2fr_6rem_8rem] gap-4 px-4 py-2 text-xs font-semibold text-telegram-subtext border-b border-telegram-border mb-2 select-none items-center">
-                        <div className="text-center">#</div>
+                        <div className="text-center">序号</div>
                         <button onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-telegram-text transition-colors">
-                            Name <SortIcon field="name" />
+                            名称 <SortIcon field="name" />
                         </button>
                         <button onClick={() => handleSort('size')} className="flex items-center gap-1 justify-end hover:text-telegram-text transition-colors">
-                            Size <SortIcon field="size" />
+                            大小 <SortIcon field="size" />
                         </button>
                         <button onClick={() => handleSort('date')} className="flex items-center gap-1 justify-end hover:text-telegram-text transition-colors">
-                            Date <SortIcon field="date" />
+                            日期 <SortIcon field="date" />
                         </button>
                     </div>
 
@@ -292,7 +292,7 @@ export function FileExplorer({
                                             className="flex items-center gap-4 px-4 py-3 rounded-lg cursor-pointer border border-dashed border-telegram-border text-telegram-subtext hover:text-telegram-text hover:bg-telegram-hover w-full"
                                         >
                                             <div className="w-5 h-5 flex items-center justify-center"><Plus className="w-4 h-4" /></div>
-                                            <span className="text-sm font-medium">Upload File...</span>
+                                            <span className="text-sm font-medium">上传文件...</span>
                                         </button>
                                     </div>
                                 );
