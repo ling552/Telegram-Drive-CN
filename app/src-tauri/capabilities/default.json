@@ -1,17 +1,22 @@
 {
   "identifier": "default",
+  "description": "Standard permissions for Telegram Drive",
   "windows": [
     "main"
   ],
   "permissions": [
     "core:default",
+    "os:default",
     "shell:allow-open",
     "store:default",
-    "dialog:default",
-    "fs:default",
-    "fs:allow-appdata-read-recursive",
-    "fs:allow-appdata-write-recursive",
-    "fs:allow-appdata-meta-recursive",
-    "updater:default"
+    "updater:default",
+    "process:allow-restart",
+    "deep-link:default",
+    "clipboard-manager:allow-write-text",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:scope-app-recursive"
   ]
 }

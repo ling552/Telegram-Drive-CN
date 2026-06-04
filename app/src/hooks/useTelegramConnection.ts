@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Store } from '@tauri-apps/plugin-store';
+import { load, type Store } from '@tauri-apps/plugin-store';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useConfirm } from '../context/ConfirmContext';
-import { TelegramFolder } from '../types';
+import { TelegramFolder, FolderInviteInfo } from '../types';
 import { useNetworkStatus } from './useNetworkStatus';
 
 export function useTelegramConnection(onLogoutParent: () => void) {
@@ -20,53 +20,67 @@ export function useTelegramConnection(onLogoutParent: () => void) {
 
     const networkIsOnline = useNetworkStatus();
 
+    // Ref to always point to the latest handleSyncFolders without triggering effect re-runs.
+    // Initialized as null then assigned after handleSyncFolders is declared below.
+    const handleSyncFoldersRef = useRef<((silentParam?: boolean | unknown) => Promise<void>) | null>(null);
 
+    // Load persisted store and restore saved folders.
+    // NOTE: The Telegram connection is already established by App.tsx before
+    // Dashboard mounts, so we do NOT call cmd_connect here. This prevents
+    // duplicate network runners and race conditions in the Rust backend.
     useEffect(() => {
         const initStore = async () => {
             try {
-                let _store = await Store.load('config.json');
+                let _store = await load('config.json');
                 const checkId = await _store.get<string>('api_id');
                 if (!checkId) {
-                    _store = await Store.load('settings.json');
+                    _store = await load('settings.json');
                 }
                 setStore(_store);
 
                 const savedFolders = await _store.get<TelegramFolder[]>('folders');
                 if (savedFolders) setFolders(savedFolders);
 
-
                 const savedActiveFolderId = await _store.get<number | null>('activeFolderId');
                 if (savedActiveFolderId !== undefined) setActiveFolderId(savedActiveFolderId);
 
-                const apiIdStr = await _store.get<string>('api_id');
-                if (apiIdStr) {
-                    try {
-                        const apiId = parseInt(apiIdStr as string);
-                        await invoke('cmd_connect', { apiId });
-                        setIsConnected(true);
-                        queryClient.invalidateQueries({ queryKey: ['files'] });
-                    } catch {
-                        const shouldRetry = window.confirm("连接 Telegram 失败，是否重试？");
-                        if (shouldRetry) {
-                            window.location.reload();
-                        } else {
-                            if (_store) {
-                                await _store.delete('api_id');
-                                await _store.save();
-                            }
-                            onLogoutParent();
-                        }
-                    }
-                } else {
-                    onLogoutParent();
-                }
-
+                // Connection is already live — just mark connected and refresh files
+                setIsConnected(true);
+                queryClient.invalidateQueries({ queryKey: ['files'] });
             } catch {
                 // store not available
             }
         };
         initStore();
-    }, [queryClient, onLogoutParent]);
+    }, [queryClient]);
+
+    // Consolidated mount-sync + visibility-change listener in a single effect.
+    // Previously two effects with identical [store, isConnected] deps both called
+    // handleSyncFolders + queryClient.invalidateQueries, causing doubled startup work.
+    useEffect(() => {
+        if (!store || !isConnected) return;
+
+        const syncAndRefresh = async () => {
+            if (!handleSyncFoldersRef.current) return;
+            await handleSyncFoldersRef.current(true);
+            queryClient.invalidateQueries({ queryKey: ['files'] });
+        };
+
+        // Initial sync on mount / when store becomes available
+        syncAndRefresh();
+
+        // Sync again when the app returns to foreground
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                syncAndRefresh();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [store, isConnected, queryClient]);
 
 
     useEffect(() => {
@@ -74,31 +88,8 @@ export function useTelegramConnection(onLogoutParent: () => void) {
     }, [networkIsOnline]);
 
 
-    const isNetworkError = (error: string): boolean => {
-        const keywords = ['timeout', 'connection', 'network', 'socket', 'disconnected', 'EOF', 'ECONNREFUSED', 'overflow'];
-        return keywords.some(k => error.toLowerCase().includes(k.toLowerCase()));
-    };
-
-    const forceLogout = async () => {
-        setIsConnected(false);
-        try {
-            await invoke('cmd_clean_cache').catch(() => { });
-            if (store) {
-                await store.delete('api_id');
-                await store.delete('api_hash');
-                await store.delete('folders');
-                await store.save();
-            }
-        } catch {
-            // best effort cleanup
-        }
-        toast.error("连接已断开，请重新登录。");
-        onLogoutParent();
-    };
-
-
     const handleLogout = async () => {
-        if (!await confirm({ title: "退出登录", message: "确定要退出登录吗？这将断开当前会话。", confirmText: "退出登录", variant: 'danger' })) return;
+        if (!await confirm({ title: "退出登录", message: "确定要退出登录吗？这将断开你当前的会话。", confirmText: "退出登录", variant: 'danger' })) return;
 
         try {
             await invoke('cmd_logout');
@@ -111,12 +102,13 @@ export function useTelegramConnection(onLogoutParent: () => void) {
             }
             onLogoutParent();
         } catch {
-            toast.error("退出登录失败");
+            toast.error("退出登录时出错");
             onLogoutParent();
         }
     };
 
-    const handleSyncFolders = async () => {
+    const handleSyncFolders = async (silentParam?: boolean | unknown) => {
+        const silent = silentParam === true;
         if (!store) return;
         setIsSyncing(true);
         try {
@@ -133,16 +125,25 @@ export function useTelegramConnection(onLogoutParent: () => void) {
                 setFolders(merged);
                 await store.set('folders', merged);
                 await store.save();
-                toast.success(`扫描完成，发现 ${added} 个新文件夹。`);
+                if (!silent) {
+                    toast.success(`扫描完成。发现 ${added} 个新文件夹。`);
+                }
             } else {
-                toast.info("扫描完成，未发现新文件夹。");
+                if (!silent) {
+                    toast.info("扫描完成。未发现新文件夹。");
+                }
             }
         } catch {
-            toast.error("同步失败");
+            if (!silent) {
+                toast.error("同步失败");
+            }
         } finally {
             setIsSyncing(false);
         }
     };
+
+    // Keep the ref in sync with the latest function on every render
+    handleSyncFoldersRef.current = handleSyncFolders;
 
     const handleCreateFolder = async (name: string) => {
         if (!store) return;
@@ -152,7 +153,7 @@ export function useTelegramConnection(onLogoutParent: () => void) {
             setFolders(updated);
             await store.set('folders', updated);
             await store.save();
-            toast.success(`已创建文件夹「${name}」。`);
+            toast.success(`文件夹“${name}”已创建。`);
         } catch (e) {
             toast.error("创建文件夹失败：" + e);
             throw e;
@@ -162,7 +163,7 @@ export function useTelegramConnection(onLogoutParent: () => void) {
     const handleFolderDelete = async (folderId: number, folderName: string) => {
         if (!await confirm({
             title: "删除文件夹",
-            message: `确定要删除「${folderName}」吗？\n这将删除 Telegram 上的频道。`,
+            message: `确定要删除“${folderName}”吗？\n这将删除 Telegram 上对应的频道。`,
             confirmText: "删除",
             variant: 'danger'
         })) return;
@@ -176,13 +177,13 @@ export function useTelegramConnection(onLogoutParent: () => void) {
                 await store.save();
             }
             if (activeFolderId === folderId) setActiveFolderId(null);
-            toast.success(`已删除文件夹「${folderName}」。`);
+            toast.success(`文件夹“${folderName}”已删除。`);
         } catch (e: unknown) {
             const errStr = String(e);
             if (errStr.includes("not found")) {
                 if (await confirm({
                     title: "未找到文件夹",
-                    message: `Telegram 上未找到「${folderName}」（可能已被外部删除）。\n是否从本应用移除？`,
+                    message: `在 Telegram 上未找到文件夹“${folderName}”（可能已被外部删除）。\n是否从本应用中移除？`,
                     confirmText: "移除",
                     variant: 'info'
                 })) {
@@ -200,6 +201,68 @@ export function useTelegramConnection(onLogoutParent: () => void) {
         }
     };
 
+
+    const handleFolderRename = async (folderId: number, oldName: string, newNameOverride?: string) => {
+        const newName = newNameOverride?.trim();
+        if (!newName || newName === oldName) return;
+
+        try {
+            await invoke('cmd_rename_folder', { folderId, newName });
+            const updated = folders.map(f => f.id === folderId ? { ...f, name: newName } : f);
+            setFolders(updated);
+            if (store) {
+                await store.set('folders', updated);
+                await store.save();
+            }
+            toast.success(`文件夹已重命名为“${newName}”。`);
+        } catch (e) {
+            toast.error("重命名文件夹失败：" + e);
+        }
+    };
+
+    const handleFolderToggleVisibility = async (folderId: number, makePublic: boolean, desiredUsername?: string) => {
+        if (!makePublic) {
+            const confirmed = await confirm({
+                title: "设为私有",
+                message: "将该频道设为私有会移除其公开用户名。已分享的 t.me 链接将立即失效。",
+                confirmText: "设为私有",
+                variant: 'danger'
+            });
+            if (!confirmed) return;
+        }
+        try {
+            const updated = await invoke<TelegramFolder>('cmd_toggle_folder_visibility', {
+                folderId,
+                makePublic,
+                desiredUsername: desiredUsername || null,
+            });
+            const newFolders = folders.map(f =>
+                f.id === folderId ? { ...f, username: updated.username, is_public: updated.is_public } : f
+            );
+            setFolders(newFolders);
+            if (store) {
+                await store.set('folders', newFolders);
+                await store.save();
+            }
+            toast.success(makePublic ? '频道已设为公开' : '频道已设为私有');
+            return updated;
+        } catch (e) {
+            toast.error(`切换可见性失败：${e}`);
+            throw e;
+        }
+    };
+
+    const handleExportFolderInvite = async (folderId: number): Promise<FolderInviteInfo> => {
+        try {
+            const info = await invoke<FolderInviteInfo>('cmd_export_folder_invite', {
+                folderId,
+            });
+            return info;
+        } catch (e) {
+            toast.error(`获取邀请链接失败：${e}`);
+            throw e;
+        }
+    };
 
     const handleSetActiveFolderId = async (id: number | null) => {
         setActiveFolderId(id);
@@ -220,7 +283,8 @@ export function useTelegramConnection(onLogoutParent: () => void) {
         handleSyncFolders,
         handleCreateFolder,
         handleFolderDelete,
-        isNetworkError,
-        forceLogout
+        handleFolderRename,
+        handleFolderToggleVisibility,
+        handleExportFolderInvite,
     };
 }

@@ -1,4 +1,7 @@
+import { useCallback, useRef } from 'react';
+import { showFileDialogFallback, pickWithFallback } from '../utils';
 import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useConfirm } from '../context/ConfirmContext';
@@ -8,31 +11,41 @@ export function useFileOperations(
     activeFolderId: number | null,
     selectedIds: number[],
     setSelectedIds: (ids: number[]) => void,
-    displayedFiles: TelegramFile[]
+    displayedFiles: TelegramFile[],
+    queueBulkDownload?: (files: TelegramFile[], folderId: number | null) => void,
 ) {
     const queryClient = useQueryClient();
     const { confirm } = useConfirm();
 
-    const handleDelete = async (id: number) => {
-        if (!await confirm({ title: "删除文件", message: "确定要删除此文件吗？", confirmText: "删除", variant: 'danger' })) return;
+    // Refs to keep callbacks stable even when selection/file list changes
+    const selectedIdsRef = useRef(selectedIds);
+    selectedIdsRef.current = selectedIds;
+    const displayedFilesRef = useRef(displayedFiles);
+    displayedFilesRef.current = displayedFiles;
+
+    const handleDelete = useCallback(async (id: number) => {
+        if (!await confirm({ title: "删除文件", message: "确定要删除这个文件吗？", confirmText: "删除", variant: 'danger' })) return;
         try {
             await invoke('cmd_delete_file', { messageId: id, folderId: activeFolderId });
+            await invoke('cmd_delete_image_thumbnail', { messageId: id }).catch(() => {});
             queryClient.invalidateQueries({ queryKey: ['files', activeFolderId] });
             toast.success("文件已删除");
         } catch (e) {
             toast.error(`删除失败：${e}`);
         }
-    }
+    }, [activeFolderId, confirm, queryClient]);
 
-    const handleBulkDelete = async () => {
-        if (selectedIds.length === 0) return;
-        if (!await confirm({ title: "删除文件", message: `确定要删除这 ${selectedIds.length} 个文件吗？`, confirmText: "全部删除", variant: 'danger' })) return;
+    const handleBulkDelete = useCallback(async () => {
+        const ids = selectedIdsRef.current;
+        if (ids.length === 0) return;
+        if (!await confirm({ title: "删除文件", message: `确定要删除这 ${ids.length} 个文件吗？`, confirmText: "全部删除", variant: 'danger' })) return;
 
         let success = 0;
         let fail = 0;
-        for (const id of selectedIds) {
+        for (const id of ids) {
             try {
                 await invoke('cmd_delete_file', { messageId: id, folderId: activeFolderId });
+                await invoke('cmd_delete_image_thumbnail', { messageId: id }).catch(() => {});
                 success++;
             } catch {
                 fail++;
@@ -41,103 +54,134 @@ export function useFileOperations(
         setSelectedIds([]);
         queryClient.invalidateQueries({ queryKey: ['files', activeFolderId] });
         if (success > 0) toast.success(`已删除 ${success} 个文件。`);
-        if (fail > 0) toast.error(`有 ${fail} 个文件删除失败。`);
-    }
+        if (fail > 0) toast.error(`${fail} 个文件删除失败。`);
+    }, [activeFolderId, confirm, queryClient, setSelectedIds]);
 
-    const handleDownload = async (id: number, name: string) => {
-        try {
-            const savePath = await import('@tauri-apps/plugin-dialog').then(d => d.save({
-                defaultPath: name,
-            }));
-            if (!savePath) return;
-            toast.info(`开始下载：${name}`);
-            await invoke('cmd_download_file', { messageId: id, savePath, folderId: activeFolderId });
-            toast.success(`下载完成：${name}`);
-        } catch (e) {
-            toast.error(`下载失败：${e}`);
+    const handleBulkDownload = useCallback(async () => {
+        const ids = selectedIdsRef.current;
+        if (ids.length === 0) return;
+        const currentFiles = displayedFilesRef.current;
+        const targetFiles = currentFiles.filter((f) => ids.includes(f.id));
+        if (targetFiles.length === 0) return;
+        if (queueBulkDownload) {
+            queueBulkDownload(targetFiles, activeFolderId);
+            setSelectedIds([]);
+            return;
         }
-    }
-
-    const handleBulkDownload = async () => {
-        if (selectedIds.length === 0) return;
-        try {
-            const dirPath = await import('@tauri-apps/plugin-dialog').then(d => d.open({
-                directory: true, multiple: false, title: "选择下载位置"
-            }));
-            if (!dirPath) return;
+        // Fallback: direct download if queue not provided
+        const downloadToDir = async (dirPath: string) => {
             let successCount = 0;
-            const targetFiles = displayedFiles.filter((f) => selectedIds.includes(f.id));
-            toast.info(`开始批量下载 ${targetFiles.length} 个文件...`);
-
+            const sep = dirPath.includes('\\') ? '\\' : '/';
             for (const file of targetFiles) {
-                const filePath = `${dirPath}/${file.name}`;
+                const filePath = dirPath.endsWith(sep) ? `${dirPath}${file.name}` : `${dirPath}${sep}${file.name}`;
                 try {
-                    await invoke('cmd_download_file', { messageId: file.id, savePath: filePath, folderId: activeFolderId });
+                    await invoke('cmd_download_file', { req: { message_id: file.id, save_path: filePath, folder_id: activeFolderId } });
                     successCount++;
                 } catch (e) { }
             }
             toast.success(`已下载 ${successCount} 个文件。`);
             setSelectedIds([]);
+        };
+        try {
+            const dirPath = await pickWithFallback(
+                () => open({ directory: true, multiple: false, title: "选择下载位置" }),
+                () => handleBulkDownload(),
+                {
+                    errorTitle: '文件夹选择器打开失败',
+                    onBrowserPicker: async () => {
+                        const paths = await showFileDialogFallback({ directory: true, multiple: false });
+                        if (paths.length === 0) return null;
+                        const sep = paths[0].includes('\\') ? '\\' : '/';
+                        return paths[0].substring(0, paths[0].lastIndexOf(sep));
+                    },
+                },
+            );
+            if (!dirPath) return;
+            await downloadToDir(dirPath);
         } catch (e) {
             toast.error(`批量下载失败：${e}`);
         }
-    }
+    }, [activeFolderId, setSelectedIds, queueBulkDownload]);
 
-    const handleBulkMove = async (targetFolderId: number | null, onSuccess?: () => void) => {
-        if (selectedIds.length === 0) return;
+    const handleBulkMove = useCallback(async (targetFolderId: number | null, onSuccess?: () => void) => {
+        const ids = selectedIdsRef.current;
+        if (ids.length === 0) return;
         try {
             await invoke('cmd_move_files', {
-                messageIds: selectedIds,
+                messageIds: ids,
                 sourceFolderId: activeFolderId,
                 targetFolderId: targetFolderId
             });
-            toast.success(`已移动 ${selectedIds.length} 个文件。`);
+            toast.success(`已移动 ${ids.length} 个文件。`);
             queryClient.invalidateQueries({ queryKey: ['files', activeFolderId] });
             setSelectedIds([]);
             if (onSuccess) onSuccess();
         } catch {
             toast.error('移动文件失败');
         }
-    };
+    }, [activeFolderId, queryClient, setSelectedIds]);
 
-    const handleDownloadFolder = async () => {
-        if (displayedFiles.length === 0) {
+    const handleDownloadFolder = useCallback(async () => {
+        const files = displayedFilesRef.current;
+        if (files.length === 0) {
             toast.info("文件夹为空。");
             return;
         }
-        try {
-            const dirPath = await import('@tauri-apps/plugin-dialog').then(d => d.open({
-                directory: true, multiple: false, title: "选择文件夹下载位置..."
-            }));
-            if (!dirPath) return;
+        if (queueBulkDownload) {
+            queueBulkDownload(files, activeFolderId);
+            return;
+        }
+        // Fallback: direct download if queue not provided
+        const downloadToDir = async (dirPath: string) => {
             let successCount = 0;
-            toast.info(`正在下载文件夹内容（${displayedFiles.length} 个文件）...`);
-            for (const file of displayedFiles) {
-                const filePath = `${dirPath}/${file.name}`;
+            toast.info(`正在下载文件夹内容（${files.length} 个文件）...`);
+            const sep = dirPath.includes('\\') ? '\\' : '/';
+            for (const file of files) {
+                const filePath = dirPath.endsWith(sep) ? `${dirPath}${file.name}` : `${dirPath}${sep}${file.name}`;
                 try {
-                    await invoke('cmd_download_file', { messageId: file.id, savePath: filePath, folderId: activeFolderId });
+                    await invoke('cmd_download_file', { req: { message_id: file.id, save_path: filePath, folder_id: activeFolderId } });
                     successCount++;
                 } catch (e) { }
             }
             toast.success(`文件夹下载完成：${successCount} 个文件。`);
+        };
+        try {
+            const dirPath = await pickWithFallback(
+                () => import('@tauri-apps/plugin-dialog').then(d => d.open({
+                    directory: true, multiple: false, title: "下载文件夹到..."
+                })),
+                () => handleDownloadFolder(),
+                {
+                    errorTitle: '文件夹选择器打开失败',
+                    onBrowserPicker: async () => {
+                        const paths = await showFileDialogFallback({ directory: true, multiple: false });
+                        if (paths.length === 0) return null;
+                        const sep = paths[0].includes('\\') ? '\\' : '/';
+                        return paths[0].substring(0, paths[0].lastIndexOf(sep));
+                    },
+                },
+            );
+            if (!dirPath) return;
+            await downloadToDir(dirPath);
         } catch (e) {
-            toast.error("错误：" + e);
+            toast.error("出错：" + e);
         }
-    }
+    }, [activeFolderId, queueBulkDownload]);
+
+    const handleGlobalSearch = useCallback(async (query: string) => {
+        try {
+            return await invoke<TelegramFile[]>('cmd_search_global', { query });
+        } catch {
+            return [];
+        }
+    }, []);
 
     return {
         handleDelete,
         handleBulkDelete,
-        handleDownload,
         handleBulkDownload,
         handleBulkMove,
         handleDownloadFolder,
-        handleGlobalSearch: async (query: string) => {
-            try {
-                return await invoke<TelegramFile[]>('cmd_search_global', { query });
-            } catch {
-                return [];
-            }
-        }
+        handleGlobalSearch,
     };
 }

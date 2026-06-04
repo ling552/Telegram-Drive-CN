@@ -5,8 +5,11 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use grammers_mtsender::SenderPool;
 use grammers_session::storages::SqliteSession;
+use grammers_session::Session;
 use tokio::sync::oneshot;
 use tokio::time::Duration;
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use grammers_tl_types as tl;
 
 use crate::TelegramState;
 use crate::models::{AuthResult};
@@ -22,6 +25,20 @@ pub async fn ensure_client_initialized(
     state: &State<'_, TelegramState>,
     api_id: i32,
 ) -> Result<Client, String> {
+    #[cfg(target_os = "android")]
+    {
+        let mut count = 0;
+        while ndk_context::android_context().vm().is_null() || ndk_context::android_context().context().is_null() {
+            if count >= 200 { // 10 seconds timeout
+                return Err("等待 Android JNI 上下文初始化超时。".to_string());
+            }
+            log::info!("Waiting for Android JNI context to initialize ({}ms)...", count * 50);
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            count += 1;
+        }
+        log::info!("Android JNI context is ready!");
+    }
+
     let mut client_guard = state.client.lock().await;
 
     if let Some(client) = client_guard.as_ref() {
@@ -30,15 +47,18 @@ pub async fn ensure_client_initialized(
 
     // CRITICAL: Shutdown existing runner before creating a new one
     // This prevents runner task accumulation which causes stack overflow
-    {
-        let mut shutdown_guard = state.runner_shutdown.lock().await;
-        if let Some(shutdown_tx) = shutdown_guard.take() {
+    let did_shutdown_old_runner = {
+        let mut guard = state.runner_shutdown.lock().unwrap();
+        if let Some(shutdown_tx) = guard.take() {
             log::info!("Signaling old runner to shutdown...");
             let _ = shutdown_tx.send(());
-            // Brief wait for old runner to cleanup
-            drop(shutdown_guard);
-            tokio::time::sleep(Duration::from_millis(100)).await;
+            true
+        } else {
+            false
         }
+    }; // MutexGuard dropped here — before the await
+    if did_shutdown_old_runner {
+        tokio::time::sleep(Duration::from_millis(100)).await;
     }
 
     let runner_num = state.runner_count.fetch_add(1, Ordering::SeqCst) + 1;
@@ -46,38 +66,92 @@ pub async fn ensure_client_initialized(
     
     // Resolve session path safely
     let app_data_dir = app_handle.path().app_data_dir()
-        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+        .map_err(|e| format!("获取应用数据目录失败：{}", e))?;
         
     if !app_data_dir.exists() {
         std::fs::create_dir_all(&app_data_dir)
-            .map_err(|e| format!("Failed to create app data dir: {}", e))?;
+            .map_err(|e| format!("创建应用数据目录失败：{}", e))?;
     }
     
     let session_path = app_data_dir.join("telegram.session");
     let session_path_str = session_path.to_string_lossy().to_string();
     log::info!("Opening session at: {}", session_path_str);
     
-    // Grammers initialization with corruption recovery
-    let session = match SqliteSession::open(&session_path_str).map_err(|e| e.to_string()) {
+    let mut session_open_result = SqliteSession::open(&session_path_str);
+    
+    // Retry opening the session database up to 5 times (every 100ms)
+    // in case the database is temporarily locked by the old shutting down runner.
+    if session_open_result.is_err() {
+        for attempt in 1..=5 {
+            log::warn!("Failed to open session on attempt {} (database may be locked). Retrying in 100ms...", attempt);
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            session_open_result = SqliteSession::open(&session_path_str);
+            if session_open_result.is_ok() {
+                break;
+            }
+        }
+    }
+
+    let session = match session_open_result.map_err(|e| e.to_string()) {
         Ok(s) => s,
-        Err(_) => {
-            log::warn!("Session file corrupted or invalid. Recreating...");
+        Err(e) => {
+            log::warn!("Session file could not be opened after retries ({}). Recreating...", e);
             let _ = std::fs::remove_file(&session_path);
             let _ = std::fs::remove_file(format!("{}-wal", session_path_str));
             let _ = std::fs::remove_file(format!("{}-shm", session_path_str));
             
             SqliteSession::open(&session_path_str)
-                .map_err(|e| format!("Failed to open session after recreation: {}", e))?
+                .map_err(|err| format!("重新创建后打开会话失败：{}", err))?
         }
     };
         
+    let net_config = app_handle.state::<Arc<crate::vpn_optimizer::NetworkConfig>>();
+    let preferred_dc = {
+        let vpn = net_config.vpn.read().unwrap();
+        if vpn.enabled {
+            vpn.preferred_dc.clone()
+        } else {
+            "auto".to_string()
+        }
+    };
+    if preferred_dc.starts_with("dc") && preferred_dc.len() > 2 {
+        if let Ok(dc_id) = preferred_dc[2..].parse::<i32>() {
+            log::info!("Setting preferred home DC ID: {}", dc_id);
+            session.set_home_dc_id(dc_id);
+        }
+    }
+
+    let mut connection_params = grammers_mtsender::ConnectionParams::default();
+    let proxy = net_config.proxy.read().unwrap();
+    if proxy.enabled && !proxy.host.is_empty() {
+        if proxy.proxy_type == "socks5" {
+            let url = if !proxy.username.is_empty() {
+                let encoded_user = urlencoding::encode(&proxy.username);
+                let encoded_pass = urlencoding::encode(&proxy.password);
+                format!(
+                    "socks5://{}:{}@{}:{}",
+                    encoded_user, encoded_pass, proxy.host, proxy.port
+                )
+            } else {
+                format!("socks5://{}:{}", proxy.host, proxy.port)
+            };
+            log::info!("Using SOCKS5 proxy: socks5://{}:{}", proxy.host, proxy.port);
+            connection_params.proxy_url = Some(url);
+        } else {
+            log::warn!(
+                "Unsupported proxy type: {}. grammers only supports SOCKS5 proxy.",
+                proxy.proxy_type
+            );
+        }
+    }
+
     let session = Arc::new(session);
-    let pool = SenderPool::new(session, api_id);
+    let pool = SenderPool::with_configuration(session, api_id, connection_params);
     let client = Client::new(&pool);
     
     // Create shutdown channel for this runner
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
-    *state.runner_shutdown.lock().await = Some(shutdown_tx);
+    *state.runner_shutdown.lock().unwrap() = Some(shutdown_tx);
     
     // Spawn the network runner with shutdown support
     let SenderPool { runner, .. } = pool;
@@ -144,14 +218,56 @@ pub async fn cmd_check_connection(
                     log::info!("Auto-reconnect successful.");
                     return Ok(true);
                 } else {
-                    return Err("Reconnect succeeded but ping failed.".to_string());
+                    return Err("重新连接成功，但 ping 失败。".to_string());
                 }
             },
-            Err(e) => return Err(format!("Auto-reconnect failed: {}", e))
+            Err(e) => return Err(format!("自动重新连接失败：{}", e))
         }
     }
 
     Ok(false) // Not connected and no credentials to reconnect
+}
+
+#[tauri::command]
+pub async fn cmd_reconnect_with_network_settings(
+    app_handle: tauri::AppHandle,
+    state: State<'_, TelegramState>,
+) -> Result<bool, String> {
+    let api_id = *state.api_id.lock().await;
+    let api_id = match api_id {
+        Some(id) => id,
+        None => return Err("未通过认证 —— 没有保存的 API ID。".into()),
+    };
+
+    log::info!("Reconnecting with updated network settings...");
+
+    // 1. Shutdown existing runner
+    {
+        let mut shutdown_guard = state.runner_shutdown.lock().unwrap();
+        if let Some(shutdown_tx) = shutdown_guard.take() {
+            log::info!("Signaling runner shutdown for reconnect...");
+            let _ = shutdown_tx.send(());
+        }
+    }
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    // 2. Clear old client
+    *state.client.lock().await = None;
+
+    // 3. Reinitialize with current network config (reads from NetworkConfig state)
+    let client = ensure_client_initialized(&app_handle, &state, api_id).await?;
+
+    // 4. Verify the new connection works
+    match client.get_me().await {
+        Ok(_me) => {
+            log::info!("Reconnect successful — verified via get_me().");
+            Ok(true)
+        }
+        Err(e) => {
+            log::error!("Reconnect init succeeded but get_me failed: {}", e);
+            Err(format!("已重新连接，但 ping 失败：{}", e))
+        }
+    }
 }
 
 #[tauri::command]
@@ -163,7 +279,7 @@ pub async fn cmd_logout(
     
     // 1. Shutdown the network runner FIRST to prevent any operations
     {
-        let mut shutdown_guard = state.runner_shutdown.lock().await;
+        let mut shutdown_guard = state.runner_shutdown.lock().unwrap();
         if let Some(shutdown_tx) = shutdown_guard.take() {
             log::info!("Signaling runner shutdown for logout...");
             let _ = shutdown_tx.send(());
@@ -182,9 +298,11 @@ pub async fn cmd_logout(
     *state.login_token.lock().await = None;
     *state.password_token.lock().await = None;
     *state.api_id.lock().await = None;
+    crate::commands::utils::clear_peer_cache(&state.peer_cache).await;
+    state.cancelled_transfers.write().await.clear();
 
     // 4. Remove Session File
-    let app_data_dir = app_handle.path().app_data_dir().unwrap();
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
     let session_path = app_data_dir.join("telegram.session");
     let _ = std::fs::remove_file(session_path);
     let _ = std::fs::remove_file(app_data_dir.join("telegram.session-wal"));
@@ -204,7 +322,7 @@ pub async fn cmd_auth_request_code(
 ) -> Result<String, String> {
     
     if api_hash.trim().is_empty() {
-        return Err("API Hash cannot be empty.".to_string());
+        return Err("API Hash 不能为空。".to_string());
     }
 
     // Store API ID
@@ -241,7 +359,7 @@ pub async fn cmd_auth_request_code(
         }
     }
 
-    Err(format!("Telegram Error after retry: {}", last_error))
+    Err(format!("重试后仍出现 Telegram 错误：{}", last_error))
 }
 
 #[tauri::command]
@@ -253,11 +371,11 @@ pub async fn cmd_auth_sign_in(
     
     let client = {
         let guard = state.client.lock().await;
-        guard.as_ref().ok_or("Client not initialized")?.clone()
+        guard.as_ref().ok_or("客户端未初始化")?.clone()
     };
 
     let token_guard = state.login_token.lock().await;
-    let login_token = token_guard.as_ref().ok_or("No login session found (restart flow)")?;
+    let login_token = token_guard.as_ref().ok_or("未找到登录会话（请重新开始登录流程）")?;
 
     match client.sign_in(login_token, &code).await {
         Ok(_user) => {
@@ -280,7 +398,7 @@ pub async fn cmd_auth_sign_in(
         }
         Err(e) => {
            log::error!("Sign in error: {}", e);
-           Err(format!("Sign in failed: {}", e))
+           Err(format!("登录失败：{}", e))
         }
     }
 }
@@ -292,11 +410,11 @@ pub async fn cmd_auth_check_password(
 ) -> Result<AuthResult, String> {
     let client = {
         let guard = state.client.lock().await;
-        guard.as_ref().ok_or("Client not initialized")?.clone()
+        guard.as_ref().ok_or("客户端未初始化")?.clone()
     };
-    
+
     let mut pw_guard = state.password_token.lock().await;
-    let pw_token = pw_guard.take().ok_or("No password session found")?;
+    let pw_token = pw_guard.take().ok_or("未找到密码会话")?;
 
     match client.check_password(pw_token, password.as_str()).await {
         Ok(_user) => {
@@ -307,6 +425,99 @@ pub async fn cmd_auth_check_password(
                 error: None,
             })
         }
-        Err(e) => Err(format!("2FA Failed: {}", e))
+        Err(e) => Err(format!("两步验证失败：{}", e))
+    }
+}
+
+/// QR Login -- Step 1: Export a login token and return the `tg://login?token=...` URL.
+/// The frontend renders this as a QR code for the user to scan with their phone.
+#[tauri::command]
+pub async fn cmd_auth_qr_login(
+    app_handle: tauri::AppHandle,
+    api_id: i32,
+    api_hash: String,
+    state: State<'_, TelegramState>,
+) -> Result<String, String> {
+    if api_hash.trim().is_empty() {
+        return Err("API Hash 不能为空。".to_string());
+    }
+
+    // Store API ID
+    *state.api_id.lock().await = Some(api_id);
+
+    let client = ensure_client_initialized(&app_handle, &state, api_id).await?;
+
+    log::info!("Requesting QR login token...");
+
+    let result = client.invoke(&tl::functions::auth::ExportLoginToken {
+        api_id,
+        api_hash: api_hash.clone(),
+        except_ids: vec![],
+    }).await.map_err(|e| format!("导出登录令牌失败：{}", e))?;
+
+    match result {
+        tl::enums::auth::LoginToken::Token(t) => {
+            let encoded = URL_SAFE_NO_PAD.encode(&t.token);
+            let url = format!("tg://login?token={}", encoded);
+            log::info!("QR login URL generated, expires at {}", t.expires);
+            Ok(url)
+        }
+        tl::enums::auth::LoginToken::Success(_s) => {
+            // Already authorized (e.g. from a previous session)
+            log::info!("QR login: already authorized");
+            Ok("__authorized__".to_string())
+        }
+        tl::enums::auth::LoginToken::MigrateTo(m) => {
+            log::info!("QR login: need to migrate to DC {}", m.dc_id);
+            let encoded = URL_SAFE_NO_PAD.encode(&m.token);
+            let url = format!("tg://login?token={}", encoded);
+            Ok(url)
+        }
+    }
+}
+
+/// QR Login -- Step 2: Poll for scan completion.
+/// Checks if the session became authorized after the user scanned the QR code.
+///
+/// IMPORTANT: We must NOT call auth.exportLoginToken here for polling.
+/// Each call to exportLoginToken generates a NEW token and invalidates the
+/// previous one, causing the scanned QR code to fail with "Invalid code".
+/// Instead, we check is_authorized() which succeeds once the phone app
+/// accepts the token via auth.acceptLoginToken.
+#[tauri::command]
+pub async fn cmd_auth_qr_poll(
+    state: State<'_, TelegramState>,
+) -> Result<AuthResult, String> {
+    let client = {
+        let guard = state.client.lock().await;
+        guard.as_ref().ok_or("客户端未初始化")?.clone()
+    };
+
+    // Check if the session is now authorized (user scanned QR on phone)
+    match client.is_authorized().await {
+        Ok(true) => {
+            log::info!("QR login: session authorized!");
+            Ok(AuthResult {
+                success: true,
+                next_step: Some("dashboard".to_string()),
+                error: None,
+            })
+        }
+        Ok(false) => {
+            // Not yet scanned or accepted
+            Ok(AuthResult {
+                success: false,
+                next_step: Some("waiting".to_string()),
+                error: None,
+            })
+        }
+        Err(e) => {
+            log::warn!("QR poll auth check failed: {}", e);
+            Ok(AuthResult {
+                success: false,
+                next_step: Some("waiting".to_string()),
+                error: None,
+            })
+        }
     }
 }

@@ -1,117 +1,349 @@
 # Changelog
 
+## [1.8.4] - 2026-06-03
+
+### 错误修复与界面优化
+
+- **网格虚拟化器缓存失效**
+  - 通过在布局变更时强制虚拟化器重新测量，解决了网格视图中“Upload File”和“Upload Folder”按钮与文件相互重叠的布局问题。
+
+---
+
+## [1.8.3] - 2026-06-03
+
+### 错误修复与界面优化
+
+- **跨平台视频流播放修复**
+  - 解决了各客户端 webview 中动态 CORS 拦截行为的问题，修正了 Windows、macOS 和 Linux 上的媒体加载与播放错误。
+- **文件网格界面与布局对齐**
+  - 修正了文件浏览器网格布局中卡片错位和重叠的问题。
+  - 配置了在目录导航过程中自动重置滚动位置并清除虚拟化器缓存。
+
+---
+
+## [1.8.2] - 2026-06-03
+
+### 流媒体热修复：跨平台视频播放修正
+
+- **CORS 配置更新**
+  - 更新了本地流媒体服务器和 API 服务器的 CORS 配置，改用动态来源匹配。
+  - 通过显式支持各平台特定的自定义协议方案以及 WebKit 的 `null` 来源，解决了 Windows、macOS 和 Linux 客户端上的视频播放失败问题（`TypeError: Failed to fetch` / `TypeError: Load failed`）。
+
+---
+
+## [1.8.1] - 2026-06-03
+
+### 功能、安全与架构（MimoPro 清理 第二部分）
+
+- **用户界面增强**
+  - 通过统一关闭和全屏覆盖按钮，优化了媒体播放器控件。
+  - 调整了播放器圆形按钮的布局几何，并平衡了间距。
+  - 集成了全新的周期性插屏广告流程，包含定时倒计时以及自动点击/失焦关闭逻辑。
+
+- **存储与后端稳定性修复**
+  - 重新创建了缺失的移动端能力规则，以支持 Tauri 配置上下文的编译。
+  - 修正了界面进度条和下载队列中的进度字段映射（`downloadedBytes`）。
+  - 解决了本地构建时的动态导入解析行为。
+  - 扩展了内容安全策略（CSP）规则，以允许广告网络脚本的调用。
+
+- **无障碍支持改进**
+  - 通过平台媒体查询自动启用性能模式和减弱动效模式。
+  - 将主要组件视图包裹在细粒度的错误边界中，以防止应用整体崩溃。
+
+---
+
+## [1.8.0] - 2026-06-02
+
+### 功能、安全与架构（MimoPro 分析清理）
+
+- **关键修复**
+  - 统一了 `package.json`、`tauri.conf.json` 和 `Cargo.toml` 之间的版本号。
+  - 将 `sharing.rs` 中硬编码的 `localhost` 引用替换为 `127.0.0.1`，以确保本地回环解析可靠工作。
+  - 从 API 端点响应中移除了具有误导性的模拟限流响应头（`x-ratelimit-limit` 等）。
+
+- **依赖升级**
+  - 升级了已弃用的依赖项（`base64` 升级到 `0.22`，`rand` 升级到 `0.9`）。
+  - 统一了 Tauri 插件的版本号字符串（`tauri-plugin-dialog`、`tauri-plugin-updater`、`tauri-plugin-process`），一致使用版本 `"2"`。
+
+- **无用代码清理**
+  - 彻底移除了空的 `DropZoneContext.tsx`，并从 `App.tsx` 中移除了 `<DropZoneProvider>` 包裹层。
+  - 清理了未使用的状态变量（`_internalDragFileId`）和未使用的 hook 导出（`isNetworkError`、`forceLogout`、`handleDownload`）。
+  - 移除了无用的设置字段（`proxySecret`、`ProxyConfig.secret`）。
+
+- **安全增强**
+  - 为文件夹分享密码实现了安全的 `bcrypt` 哈希（工作因子 `12`）。
+  - 将 API 密钥验证中的直接比较替换为使用 `constant_time_eq` 的常量时间比较，以防止时序攻击。
+
+- **架构与代码去重**
+  - 提取了下载和媒体流共用的字节范围解析与分块计算逻辑。
+  - 将重复的 MP4 容器 box 头导航和 box 校验逻辑合并到单个模块中。
+  - 统一了重复的密码哈希与验证代码。
+  - 修正了 `DownloadItem` 内部的字段命名不一致问题（`uploadedBytes` 改为 `downloadedBytes`）。
+
+---
+
+## [1.7.9] - 2026-06-02
+
+### 功能与修复
+
+- **文件夹重命名错误修复** — 解决了在侧边栏重命名文件夹失败的问题，原因是捕获阶段的点击监听器在按钮操作得以执行之前就卸载了上下文菜单。
+- **媒体播放器样式** — 将关闭和全屏圆形按钮统一为标准尺寸，并在两者之间保留小间距。
+
+---
+
+## [1.7.8] - 2026-06-01
+
+### 功能与增强
+
+- **重大界面改进**
+- **媒体播放器全面改版**
+- **多项错误修复**
+
+---
+
+## [1.7.0] - 2026-05-29
+
+### 功能与文档
+
+- **预构建 Android APK 更新** — 将文档中预留的 APK 构建发布引用更新为 `v2.1.0-beta`。
+- **Android 应用截图库** — 新增了大量截图章节，展示精美的移动端界面布局、主题视图以及进行中的队列传输。
+- **桌面端版本升级至 v1.7.0** — 将桌面端版本号提升至 v1.7.0，以实现同步发布。
+
+---
+
+## [1.6.9] - 2026-05-29
+
+### 功能与增强
+
+- **Android 编译修复** — 清理了构建配置文件，以防止 deepLinkProtocols 语法冲突。
+- **移动端 Shell 与 macOS 授权** — 配置了自定义 shell 集成能力，并设置了 macOS 授权 plist 文件。
+
+---
+
+## [1.6.8] - 2026-05-25
+
+### 功能与修复
+
+- **应用内更新权限修复** — 在 `src-tauri/capabilities/default.json` 中授予了 `"process:allow-restart"` 能力权限，使前端更新器能够在安装更新后安全地重启应用。
+
+---
+
+## [1.6.7] - 2026-05-23
+
+### 功能与修复
+
+- **Windows 构建与 Git 检出修复** — 将 `app/.npm-cache` 文件从 Git 中取消追踪并忽略，以修复 Windows 平台上的“Filename too long”检出和构建错误。
+- **Tauri 签名密钥安全** — 将更新器签名密钥替换为受密码保护的密钥对，并在 CI 流水线中恢复了密钥密码集成。
+
+---
+
+## [1.6.6] - 2026-05-22
+
+### 功能与修复
+
+- **Tauri 更新器集成与专属界面** — 全面集成并解决了生产环境更新器配置问题。
+  - **更新器构建产物**：在 `tauri.conf.json` 中将 `createUpdaterArtifacts` 设为 `true`，以便在生产构建过程中动态生成签名（`.sig`）和 `latest.json` 清单文件。
+  - **应用内更新界面**：在“常规设置”标签页中新增了原生的“检查更新”控制面板，包含可视化下载进度条、状态提示，以及自动“更新并重启”集成。
+  - **Promise 安全**：通过为发后即忘的后台更新检查 Promise 追加显式的 `.catch` 错误日志，处理了未捕获的 Promise 拒绝行为。
+  - **自动化工作流发布**：增强了 GitHub Release CI 工作流，使其能够使用 `awk` 动态地从 `CHANGELOG.md` 中自动解析并仅提取最新的发布说明。
+
+---
+
+## [1.6.5] - 2026-05-21
+
+### 功能与增强
+
+- **REST API 增强（Actix-web 与 Rust）** — 使用 Rust/Actix-web 全面实现了完整的 REST API 扩展，并保持响应结构向后兼容。
+  - **优化的文件夹导航**：将 `folder_id` 查询处理拆解为三种确定性的查询状态：省略时返回所有文件，`?folder_id=` 时仅返回根目录，按特定文件夹 ID 过滤时返回子文件夹文件。
+  - **标准化分页封装**：将集合包裹在简洁的负载格式中，包含 `data` 数组、`pagination` 指标（`page`、`limit`、`total_items`、`total_pages`）以及一个 `filters` 回显块。
+  - **高级查询参数**：引入了服务端排序（`sort_by`、`sort_order`），以及针对 MIME 类型、文件大小范围和创建日期范围的强大过滤器。
+  - **稀疏字段集**：新增 `?fields=` 选择器，使客户端可以请求特定的元数据子集，以减少带宽开销。
+  - **批量操作与全局搜索**：新增 `POST /api/v1/files/bulk` 用于批量移动和删除，以及支持完整分页封装的 `GET /api/v1/files/search`。
+  - **限流集成**：在标准响应中注入了模拟的 API 限流响应头（`X-RateLimit-Limit`、`X-RateLimit-Remaining`、`X-RateLimit-Reset`）。
+
+---
+
+## [1.6.0] - 2026-05-21
+
+### 功能与修复
+
+- **“复制 Telegram 链接”功能** — 新增了右键上下文菜单选项，可复制公开频道中文件的原始 `t.me` 消息链接（`https://t.me/{username}/{message_id}`）。如果频道为私有，该选项将显示为禁用状态并附带说明性提示。
+- **Tauri 2 Tokio 运行时崩溃修复** — 修复了带宽管理器中由 `tokio::task::spawn_blocking` 在 Tokio 运行时上下文之外执行而导致的 `there is no reactor running` 崩溃。将异步任务替换为轻量的同步写入，彻底解决了该崩溃。
+
+---
+
+## [1.5.0] - 2026-05-19
+
+### 功能
+
+- **VPN 优化器与代理配置** — 新增了对切换 VPN 模式的强大支持，可优化网络连接超时、重试次数限制、退避延迟、自适应轮询、flood wait 处理以及 peer 缓存。完整集成了代理配置（SOCKS5 和 MTProto），允许自定义路由并绕过地域封锁。
+
+---
+
+## [1.4.2] - 2026-05-18
+
+### 功能
+
+- **文件夹上传与自动压缩** — 支持直接上传整个文件夹，在传输前自动将其压缩为高度优化的 zip 归档文件。
+
+---
+
+## [1.1.7] - 2026-05-01
+
+### 功能
+
+- 在主登录界面新增了捐赠按钮和弹出弹窗，可通过 PayPal、Litecoin 和 Bitcoin 支持本项目。
+
+---
+
+## [1.1.6] - 2026-04-28
+
+### 修复
+
+- 修复了从终端启动时按 Ctrl+C（SIGINT）进程无法终止的问题。
+  Actix-web 流媒体服务器和 grammers 网络运行器运行在非守护线程上，
+  且没有将关闭信号接入进程退出流程，导致主窗口关闭后应用
+  无限期挂起。现在应用会注册一个 RunEvent::Exit 处理器，
+  在进程退出前优雅地停止这两个后台服务。
+
+---
+
+## [1.1.5] - 2026-04-27
+
+### 热修复
+
+- **CI 修复：AppImage 补丁步骤现可干净运行** — 将脆弱的 `grep -oP` Perl 前瞻（在 `set -euo pipefail` 下会以代码 2 退出）替换为安全的基于 `awk` 的 `.desktop` 文件查找。新增 `APPIMAGE_EXTRACT_AND_RUN=1`，使 `appimagetool` 在 GitHub Actions 运行器上无需 FUSE 内核模块。
+
+---
+
+## [1.1.4] - 2026-04-27
+
+### 热修复
+
+- **针对 Arch/滚动发行版 Linux 的更深层 AppImage EGL 修复** — 新增了一个 CI 构建后的补丁步骤，从 AppImage squashfs 中剥离 Ubuntu 自带的 `libEGL`、`libGL`、`libGLdispatch`、`libGLX` 和 `libGLESv2`，并将 `AppRun` 包装脚本替换为一个具备以下功能的版本：将 locale 规范化为 `C.UTF-8`，设置 `NO_AT_BRIDGE=1` 以消除 ATK 警告，从 `$WAYLAND_DISPLAY`/`$DISPLAY` 自动检测 `EGL_PLATFORM`，将 GLVND 指向系统 ICD 厂商目录，预加载系统的 `libEGL.so.1`，并对 `LD_LIBRARY_PATH` 排序，确保始终优先解析宿主 GPU 驱动而非自带的桩库。
+
+---
+
+## [1.1.3] - 2026-04-27
+
+### 热修复
+
+- **修复 Arch Linux AppImage 崩溃** — 解决了 Arch Linux（及其他滚动发行版）上由自带的 Mesa/EGL 库与宿主 GPU 驱动栈冲突导致的 `EGL_BAD_ALLOC` 错误。现在应用会在 WebView 初始化之前自动在 Linux 上禁用 WebKitGTK 的 DMA-BUF 渲染器，对 Windows 或 macOS 构建无任何影响。
+
+---
+
 ## [1.0.4] - 2026-02-13
 
-### Bug Fixes
+### 修复
 
-- **Grid Card Overlap Fix** - Cards no longer overlap at any window size. Replaced CSS `aspect-[4/3]` with explicit pixel heights synchronized to the virtualizer's row budget.
+- 终于彻底解决了网格重叠的错误。卡片此前使用 CSS `aspect-[4/3]` 来确定自身尺寸，而虚拟化器则单独计算行高——在某些窗口宽度下两者不一致，导致行与行相互渗透。现在两者都使用相同的显式像素高度，因此无论如何调整窗口大小都不会再出现重叠。
 
-### Code Quality
+### 清理
 
-- Removed all `console.log/warn/error` statements (16 total, kept 1 in ErrorBoundary)
-- Replaced all `as any` type casts with proper types
-- Fixed all Rust Clippy warnings (7 → 0)
-- Removed 3 unused npm dependencies (`clsx`, `tailwind-merge`, `@tauri-apps/plugin-opener`)
-- Stripped ~40 AI-generated comments across TypeScript and Rust files
+- 通读了整个代码库，移除了调试时遗留的所有 `console.log` / `console.error`（共 16 处）。`ErrorBoundary` 中的那一处予以保留，因为这正是错误边界的意义所在。
+- 去除了前端所有的 `as any` 类型断言——现在一切都已正确类型化。
+- 运行了 Clippy 并修复了全部 7 个警告，包括 `fs.rs` 中几个需要手动重构的 `collapsible_match` 警告。
+- 从 `package.json` 中移除了 `clsx`、`tailwind-merge` 和 `@tauri-apps/plugin-opener`——它们实际上没有在任何地方被引用。
+- 全局性的注释清理。
 
 ---
 
 ## [1.0.3] - 2026-02-09
 
-### Bug Fixes
+### 错误修复
 
-- **Grid Spacing Fix** - Fixed cards overlapping in grid view
-- **Dynamic Row Height** - Grid now properly calculates row height based on window size
-- **Virtualizer Re-measurement** - Grid correctly updates when resizing window
+- **网格间距修复** - 修复了网格视图中卡片重叠的问题
+- **动态行高** - 网格现在能根据窗口大小正确计算行高
+- **虚拟化器重新测量** - 调整窗口大小时网格能正确更新
 
 ---
 
 ## [1.0.2] - 2026-02-07
 
-### Automated Release Pipeline
+### 自动化发布流水线
 
-- **GitHub Actions Workflow** - Automatic builds triggered on version tags
-- **Cross-Platform Builds** - Windows, Linux, macOS (Intel + ARM) built in parallel
-- **Signed Updates** - All builds signed with Ed25519 for secure auto-updates
-- **Automatic Publishing** - Releases published to GitHub automatically
+- **GitHub Actions 工作流** - 在版本标签上自动触发构建
+- **跨平台构建** - 并行构建 Windows、Linux、macOS（Intel + ARM）
+- **签名更新** - 所有构建均使用 Ed25519 签名，以实现安全的自动更新
+- **自动发布** - 发布版本自动推送到 GitHub
 
 ---
 
 ## [1.0.1] - 2026-02-07
 
-### Auto-Update System
+### 自动更新系统
 
-- **Automatic Update Checks** - App checks for updates 5 seconds after startup
-- **Update Banner** - Beautiful animated banner when new version available
-- **One-Click Updates** - Download and install updates with progress indicator
-- **Cross-Platform** - Windows, Mac, and Linux users get platform-specific updates
+- **自动更新检查** - 应用在启动 5 秒后检查更新
+- **更新横幅** - 有新版本时显示精美的动画横幅
+- **一键更新** - 通过进度指示器下载并安装更新
+- **跨平台** - Windows、Mac 和 Linux 用户均可获得对应平台的更新
 
-### 🔧 Technical
+### 🔧 技术
 
-- Added Tauri updater plugin with Ed25519 signing
-- Created `useUpdateCheck` hook for update lifecycle management
-- Added `UpdateBanner` component with download progress
+- 新增了带 Ed25519 签名的 Tauri 更新器插件
+- 创建了 `useUpdateCheck` hook 用于更新生命周期管理
+- 新增了带下载进度的 `UpdateBanner` 组件
 
 ---
 
 ## [1.0.0] - 2026-02-06 🎉
 
-### First Stable Release
+### 首个稳定版本
 
-Telegram Drive is now production-ready! This release focuses on performance, reliability, and user experience polish.
+Telegram Drive 现已达到生产可用状态！本次发布聚焦于性能、可靠性以及用户体验的打磨。
 
-### ✨ New Features
+### ✨ 新增功能
 
-- **Virtual Scrolling** - Smooth performance with folders containing 1000+ files
-- **Inline Thumbnails** - Image files now display thumbnails directly in the file grid
-- **Thumbnail Caching** - Thumbnails are cached locally for instant loading on revisit
-- **API Setup Help Guide** - Step-by-step modal explaining how to get Telegram API credentials
+- **虚拟滚动** - 在包含 1000+ 文件的文件夹中也能流畅运行
+- **内联缩略图** - 图片文件现在可直接在文件网格中显示缩略图
+- **缩略图缓存** - 缩略图会缓存在本地，再次访问时即时加载
+- **API 配置帮助指南** - 分步骤的弹窗，讲解如何获取 Telegram API 凭据
 
-### 🚀 Performance Improvements
+### 🚀 性能改进
 
-- Grid and list views now only render visible items (virtualized)
-- Responsive column layout adapts to window width
-- Lazy loading of thumbnails to reduce initial load time
+- 网格视图和列表视图现在仅渲染可见项（虚拟化）
+- 响应式列布局可根据窗口宽度自适应
+- 缩略图懒加载，以缩短初始加载时间
 
-### 🎨 UI/UX Improvements
+### 🎨 界面/体验改进
 
-- Refined grid spacing (6px gaps between cards)
-- Gradient overlay on thumbnail cards for text readability
-- Improved light mode support across all components
+- 优化了网格间距（卡片之间 6px 间隙）
+- 在缩略图卡片上添加渐变叠加层，以提升文字可读性
+- 改进了所有组件的浅色模式支持
 
-### 🔧 Technical
+### 🔧 技术
 
-- Added `@tanstack/react-virtual` for virtualization
-- Separate thumbnail cache directory (`app_data_dir/thumbnails/`)
-- FileTypeIcon now supports multiple sizes
+- 引入 `@tanstack/react-virtual` 用于虚拟化
+- 独立的缩略图缓存目录（`app_data_dir/thumbnails/`）
+- FileTypeIcon 现在支持多种尺寸
 
 ---
 
 ## [0.6.0] - 2026-02-05
 
-### Reliability Update
+### 可靠性更新
 
-- Session persistence (window state, UI state, active folder)
-- Network resilience with connection status indicator
-- Queue persistence for uploads/downloads
-- Light mode UI fixes
+- 会话持久化（窗口状态、界面状态、当前活动文件夹）
+- 带连接状态指示器的网络韧性
+- 上传/下载队列持久化
+- 浅色模式界面修复
 
 ---
 
 ## [0.5.0] - 2026-02-04
 
-### Drag & Drop Update
+### 拖放更新
 
-- Stable hybrid drag-drop system
-- External drop blocker
-- GitHub Actions workflow fixes
+- 稳定的混合拖放系统
+- 外部拖入拦截器
+- GitHub Actions 工作流修复
 
 ---
 
 ## [0.4.0] - 2026-02-01
 
-### Media & Performance
+### 媒体与性能
 
-- Audio/Video streaming player
-- Global search filter
-- Internal drag & drop between folders
+- 音频/视频流播放器
+- 全局搜索过滤器
+- 文件夹之间的内部拖放

@@ -60,10 +60,8 @@ impl BandwidthManager {
             stats.date = today;
             stats.up_bytes = 0;
             stats.down_bytes = 0;
-            // Save immediately
-            drop(stats); // Release lock before calling save if save uses lock (it doesn't, but self.save_locked needs the data)
-            // Actually save_locked takes &stats, so we keep lock.
-            if let Ok(json) = serde_json::to_string(&self.stats.lock().unwrap().clone()) { let _ = fs::write(&self.file_path, json); }
+            // Save immediately using the existing locked stats reference
+            self.save_locked(&stats);
         }
     }
 
@@ -72,9 +70,51 @@ impl BandwidthManager {
         let stats = self.stats.lock().unwrap();
         let total = stats.up_bytes + stats.down_bytes + bytes;
         if total > self.limit {
-            return Err(format!("Daily bandwidth limit ({}) exceeded! Used: {}", self.format_bytes(self.limit), self.format_bytes(total)));
+            return Err(format!("已超出每日带宽限额（{}）！已使用：{}", self.format_bytes(self.limit), self.format_bytes(total)));
         }
         Ok(())
+    }
+
+    /// Atomically check the limit AND reserve bandwidth for an upload.
+    /// Call release_up() if the transfer fails to avoid permanently consuming quota.
+    pub fn try_reserve_up(&self, bytes: u64) -> Result<(), String> {
+        self.check_and_reset();
+        let mut stats = self.stats.lock().unwrap();
+        let total = stats.up_bytes + stats.down_bytes + bytes;
+        if total > self.limit {
+            return Err(format!("已超出每日带宽限额（{}）！已使用：{}", self.format_bytes(self.limit), self.format_bytes(total)));
+        }
+        stats.up_bytes += bytes;
+        self.save_locked(&stats);
+        Ok(())
+    }
+
+    /// Atomically check the limit AND reserve bandwidth for a download.
+    /// Call release_down() if the transfer fails to avoid permanently consuming quota.
+    pub fn try_reserve_down(&self, bytes: u64) -> Result<(), String> {
+        self.check_and_reset();
+        let mut stats = self.stats.lock().unwrap();
+        let total = stats.up_bytes + stats.down_bytes + bytes;
+        if total > self.limit {
+            return Err(format!("已超出每日带宽限额（{}）！已使用：{}", self.format_bytes(self.limit), self.format_bytes(total)));
+        }
+        stats.down_bytes += bytes;
+        self.save_locked(&stats);
+        Ok(())
+    }
+
+    /// Release reserved upload bandwidth after a failed transfer.
+    pub fn release_up(&self, bytes: u64) {
+        let mut stats = self.stats.lock().unwrap();
+        stats.up_bytes = stats.up_bytes.saturating_sub(bytes);
+        self.save_locked(&stats);
+    }
+
+    /// Release reserved download bandwidth after a failed transfer.
+    pub fn release_down(&self, bytes: u64) {
+        let mut stats = self.stats.lock().unwrap();
+        stats.down_bytes = stats.down_bytes.saturating_sub(bytes);
+        self.save_locked(&stats);
     }
 
     pub fn add_up(&self, bytes: u64) {

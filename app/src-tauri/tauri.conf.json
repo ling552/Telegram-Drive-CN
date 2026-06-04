@@ -1,15 +1,18 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "plugins": {
+    "shell": {
+      "open": true
+    },
     "updater": {
       "endpoints": [
         "https://github.com/caamer20/Telegram-Drive/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDBBRkI4QUZDNjZEMzZCRTIKUldUaWE5Tm0vSXI3Q3JrRDBtY2lZYUtGL3RTR2JuUTNYSCswVjNaVURXa1FSRWRPMzNPZk92YS8K"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUwN0I3MDBFMzQ5Nzk2M0MKUldROGxwYzBEbkI3VUwwOE13MURPOUtGWWVNTGNkaFZ3WEg0MHFoR0JMSlVjNXBwYksxWEhNMkoK"
     }
   },
   "productName": "Telegram Drive",
-  "version": "1.0.4",
+  "version": "1.8.4",
   "identifier": "com.cameronamer.telegramdrive",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -29,21 +32,29 @@
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self'; connect-src 'self' http://localhost:* https://asset.localhost http://asset.localhost https://www.highperformanceformat.com https://*.effectivecpmnetwork.com; media-src 'self' blob: http://localhost:*; img-src 'self' data: blob: asset: https://asset.localhost https://*.effectivecpmnetwork.com; style-src 'self' 'unsafe-inline'; script-src 'self' blob: https://www.highperformanceformat.com https://*.effectivecpmnetwork.com; frame-src 'self' blob: https://www.highperformanceformat.com https://*.effectivecpmnetwork.com; worker-src 'self' blob:;",
       "capabilities": [
-        "default"
+        "default",
+        "mobile-only"
       ]
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "entitlements": "entitlements.plist"
+    },
+    "android": {
+      "minSdkVersion": 24
+    }
   }
 }
